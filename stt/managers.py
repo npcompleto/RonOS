@@ -74,6 +74,11 @@ class SpeechToTextManager:
                             # Concatenazione e trascrizione immediata
                             segment_audio = np.concatenate(audio_buffer)
                             transcript = self._transcribe_segment(segment_audio)
+                            
+                            # Salva temporaneamente per debug
+                            #temp_audio_path = f"debug_audio_{int(start_time)}.wav"
+                            #scipy.io.wavfile.write(temp_audio_path, self.sample_rate, segment_audio.astype(np.int16))
+                            
                             stripped_transcript = transcript.strip()
                             if stripped_transcript and stripped_transcript != 'Sottotitoli e revisione a cura di QTSS':
                                 full_text += " " + stripped_transcript
@@ -81,7 +86,8 @@ class SpeechToTextManager:
                             else:
                                 config.logger.debug("Nessuna trascrizione valida ricevuta.")
                             audio_buffer = [] # Reset buffer per la prossima frase
-
+            except Exception as e:
+                config.logger.error(f"Errore: {e}")
             except KeyboardInterrupt:
                 config.logger.info("Stop manuale ricevuto.")
             finally:
