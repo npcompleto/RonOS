@@ -60,7 +60,7 @@ class SpeechToTextManager:
                     rms = np.sqrt(np.mean(audio_chunk**2))
                     current_time = time.time()
 
-                    if rms > config.VAD_THRESHOLD:
+                    if rms > float(config.VAD_THRESHOLD):
                         if not is_speaking:
                             is_speaking = True
                             config.logger.debug("Voce rilevata...")
