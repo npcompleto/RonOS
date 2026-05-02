@@ -1,146 +1,184 @@
-import config
 import queue
 import time
-import sounddevice as sd
 import numpy as np
-import scipy
-"""
-Whisper
-"""
+import sounddevice as sd
+import torch
 from faster_whisper import WhisperModel
 
 
-class SpeechToTextManager:
-    def __init__(self):
-        # Ottimizzazione: beam_size=1 e cpu_threads riducono il tempo di calcolo su CPU
-        self.model = WhisperModel("small", device="cpu", compute_type="int8", cpu_threads=4)
-        self.audio_queue = queue.Queue()
+class AlexaLikeSTT:
+
+    def __init__(self, config):
+
+        self.config = config
         self.sample_rate = config.SAMPLE_RATE
-        self.stream = None
-        config.logger.debug(f"Device Audio: {config.AUDIO_DEVICE_INDEX}")
-        config.logger.debug(f"Sample Rate: {config.SAMPLE_RATE}")
-        config.logger.debug(f"VAD Threshold: {config.VAD_THRESHOLD}")
-        config.logger.debug(f"Silence Duration Seconds: {config.SILENCE_DURATION_SECONDS}")
 
-    def _audio_callback(self, indata, frames, time, status):
-        if status:
-            config.logger.warning(f"Status Audio: {status}")
-        # Mettiamo i dati nella coda (già pronti in float32 per evitare conversioni dopo)
-        self.audio_queue.put(indata.copy().flatten())
-
-    def listen(self):
-        config.logger.info("Inizio ascolto realtime...")
-
-        chunk_duration = 0.1  # 100 ms
-        blocksize = int(self.sample_rate * chunk_duration)
-
-        self.stream = sd.InputStream(
-            samplerate=self.sample_rate,
-            channels=1,
-            dtype="float32",
-            device=config.AUDIO_DEVICE_INDEX,
-            callback=self._audio_callback,
-            blocksize=blocksize,
+        # Whisper
+        self.model = WhisperModel(
+            "small",
+            device="cpu",
+            compute_type="int8"
         )
 
-        full_text = ""
+        # Audio queue
+        self.audio_queue = queue.Queue()
 
-        is_speaking = False
-        last_speech_time = time.time()
+        # Stream
+        self.stream = None
 
-        # piccolo buffer di audio precedente all'inizio della frase
-        preroll_chunks = 3  # ~300 ms
-        preroll_buffer = []
+        # Silero VAD
+        self.vad_model, self.utils = torch.hub.load(
+            repo_or_dir="snakers4/silero-vad",
+            model="silero_vad",
+            force_reload=False
+        )
 
-        # buffer della frase corrente
-        speech_buffer = []
+        self.get_speech_timestamps = self.utils[0]
 
-        with self.stream:
-            try:
-                while True:
-                    try:
-                        audio_chunk = self.audio_queue.get(timeout=1.0)
-                    except queue.Empty:
-                        continue
+        # buffers
+        self.audio_buffer = []
+        self.preroll_buffer = []
+        self.is_speaking = False
+        self.last_voice_time = 0
 
-                    rms = np.sqrt(np.mean(audio_chunk ** 2))
-                    current_time = time.time()
+        # tuning
+        self.preroll_size = 5  # ~500ms se chunk=100ms
+        self.silence_timeout = config.SILENCE_DURATION_SECONDS
 
-                    # mantieni sempre un piccolo storico
-                    preroll_buffer.append(audio_chunk)
-                    if len(preroll_buffer) > preroll_chunks:
-                        preroll_buffer.pop(0)
+    # -------------------------
+    # AUDIO CALLBACK
+    # -------------------------
+    def _callback(self, indata, frames, time_info, status):
+        if status:
+            self.config.logger.warning(status)
 
-                    if rms > float(config.VAD_THRESHOLD):
-                        if not is_speaking:
-                            is_speaking = True
-                            config.logger.debug("Voce rilevata...")
+        self.audio_queue.put(indata.copy().flatten())
 
-                            # includi un po' di audio precedente
-                            speech_buffer = preroll_buffer.copy()
+    # -------------------------
+    # SILERO VAD CHECK
+    # -------------------------
+    def _extract_speech(self, audio_np):
 
-                        speech_buffer.append(audio_chunk)
-                        last_speech_time = current_time
+        tensor = torch.from_numpy(audio_np)
 
-                    elif is_speaking:
-                        # durante la frase continua ad accumulare anche i chunk di silenzio
-                        speech_buffer.append(audio_chunk)
+        speech_ts = self.get_speech_timestamps(
+            tensor,
+            self.vad_model,
+            sampling_rate=self.sample_rate
+        )
 
-                        if current_time - last_speech_time > config.SILENCE_DURATION_SECONDS:
-                            is_speaking = False
-                            config.logger.debug("Fine frase, trascrivo...")
+        if not speech_ts:
+            return None
 
-                            if speech_buffer:
-                                segment_audio = np.concatenate(speech_buffer)
+        segments = [
+            audio_np[ts["start"]:ts["end"]]
+            for ts in speech_ts
+        ]
 
-                                config.logger.debug(
-                                    f"segment len={len(segment_audio)} "
-                                    f"max={np.max(segment_audio):.4f} "
-                                    f"min={np.min(segment_audio):.4f}"
-                                )
+        return np.concatenate(segments)
 
-                                # debug wav corretto
-                                pcm_audio = np.clip(segment_audio, -1.0, 1.0)
-                                pcm_audio = (pcm_audio * 32767).astype(np.int16)
+    # -------------------------
+    # TRANSCRIBE
+    # -------------------------
+    def _transcribe(self, audio):
 
-                                temp_audio_path = f"debug_audio_{int(current_time)}.wav"
-                                scipy.io.wavfile.write(
-                                    temp_audio_path,
-                                    self.sample_rate,
-                                    pcm_audio
-                                )
-
-                                transcript = self._transcribe_segment(segment_audio)
-                                stripped = transcript.strip()
-
-                                if stripped and stripped != "Sottotitoli e revisione a cura di QTSS":
-                                    full_text += " " + stripped
-                                    config.logger.info(f"Trascrizione: {stripped}")
-                                else:
-                                    config.logger.debug("Nessuna trascrizione valida ricevuta.")
-
-                            speech_buffer = []
-                            preroll_buffer = []
-
-            except KeyboardInterrupt:
-                config.logger.info("Stop manuale ricevuto.")
-
-            except Exception as e:
-                config.logger.error(f"Errore: {e}")
-
-            finally:
-                config.logger.info(f"Testo totale: {full_text}")
-                return full_text
-
-    def _transcribe_segment(self, audio_data):
-        segments, info = self.model.transcribe(
-            audio_data,
+        segments, _ = self.model.transcribe(
+            audio,
             language="it",
             beam_size=1,
             vad_filter=False
         )
 
-        texts = [seg.text for seg in segments]
-        config.logger.debug(f"Segments: {texts}")
+        return "".join(s.text for s in segments).strip()
 
-        return "".join(texts)
+    # -------------------------
+    # MAIN LOOP
+    # -------------------------
+    def listen(self):
+
+        self.config.logger.info("Alexa-like STT avviato...")
+
+        blocksize = int(self.sample_rate * 0.1)  # 100ms
+
+        self.stream = sd.InputStream(
+            samplerate=self.sample_rate,
+            channels=1,
+            dtype="float32",
+            blocksize=blocksize,
+            device=self.config.AUDIO_DEVICE_INDEX,
+            callback=self._callback
+        )
+
+        full_text = ""
+
+        with self.stream:
+
+            try:
+                while True:
+
+                    try:
+                        chunk = self.audio_queue.get(timeout=1.0)
+                    except queue.Empty:
+                        continue
+
+                    now = time.time()
+
+                    # -------------------------
+                    # PRE-ROLL BUFFER SEMPRE
+                    # -------------------------
+                    self.preroll_buffer.append(chunk)
+                    if len(self.preroll_buffer) > self.preroll_size:
+                        self.preroll_buffer.pop(0)
+
+                    self.audio_buffer.append(chunk)
+
+                    # -------------------------
+                    # DETECT VOICE VIA ENERGY (FAST GATE)
+                    # -------------------------
+                    rms = np.sqrt(np.mean(chunk ** 2))
+
+                    if rms > self.config.VAD_THRESHOLD:
+
+                        if not self.is_speaking:
+                            self.config.logger.debug("🎤 voce iniziata")
+                            self.is_speaking = True
+
+                        self.last_voice_time = now
+
+                    # -------------------------
+                    # END OF SPEECH
+                    # -------------------------
+                    if self.is_speaking and (
+                        now - self.last_voice_time > self.silence_timeout
+                    ):
+
+                        self.is_speaking = False
+                        self.config.logger.debug("🛑 fine frase")
+
+                        raw_audio = np.concatenate(self.audio_buffer)
+
+                        # reset buffer
+                        self.audio_buffer = []
+                        self.preroll_buffer = []
+
+                        # -------------------------
+                        # SILERO CLEANUP
+                        # -------------------------
+                        speech_audio = self._extract_speech(raw_audio)
+
+                        if speech_audio is None:
+                            continue
+
+                        # -------------------------
+                        # TRANSCRIBE
+                        # -------------------------
+                        text = self._transcribe(speech_audio)
+
+                        if text:
+                            self.config.logger.info(f"📝 {text}")
+                            full_text += " " + text
+
+            except KeyboardInterrupt:
+                self.config.logger.info("Stop manuale")
+
+        return full_text

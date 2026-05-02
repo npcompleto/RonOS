@@ -5,7 +5,17 @@ langchain-imap
 python-dotenv
 python-telegram-bot
 pyyaml>=6.0.2
+numpy
 sounddevice
-faster_whisper
 scipy
+
+torch --index-url https://download.pytorch.org/whl/cpu
+torchaudio --index-url https://download.pytorch.org/whl/cpu
+
+faster-whisper
+
+silero-vad
+
+tqdm
+
 
