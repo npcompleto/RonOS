@@ -1,0 +1,75 @@
+import logging
+import sys
+import os
+
+# Configurazione logging immediata (prima degli altri import)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler("ron.log"),
+        logging.StreamHandler(sys.stdout)
+    ],
+    force=True  # Obbliga l'uso di questa configurazione
+)
+
+logging.getLogger("faster_whisper").setLevel(logging.WARNING)
+logger = logging.getLogger("config")
+
+# --- Configurazione Audio ---
+AUDIO_DEVICE_INDEX = os.getenv("AUDIO_DEVICE_INDEX")
+if AUDIO_DEVICE_INDEX:
+    try:
+        AUDIO_DEVICE_INDEX = int(AUDIO_DEVICE_INDEX)
+    except ValueError:
+        AUDIO_DEVICE_INDEX = None
+# Rilevamento automatico del dispositivo di input e SAMPLE_RATE
+def find_input_device(requested_index):
+    devices = []
+    try:
+        host_apis = sd.query_hostapis()
+        logger.info("--- Host APIs Rilevate ---")
+        for i, api in enumerate(host_apis):
+            logger.info(f"[{i}] {api['name']} (Default Input: {api['default_input_device']}, Default Output: {api['default_output_device']})")
+        
+        devices = sd.query_devices()
+        logger.info("--- Elenco Dispositivi Audio Rilevati ---")
+        for i, d in enumerate(devices):
+            logger.info(f"[{i}] {d['name']} - HostAPI: {d['hostapi']}, Input: {d['max_input_channels']}, Output: {d['max_output_channels']}")
+        logger.info("-----------------------------------------")
+    except Exception as e:
+        logger.error(f"Impossibile elencare i dispositivi audio: {e}")
+
+    # 1. Prova l'indice richiesto
+    if requested_index is not None:
+        try:
+            info = sd.query_devices(requested_index, 'input')
+            return requested_index, int(info['default_samplerate']), info['name']
+        except Exception as e:
+            logging.error(f"Errore query su indice {requested_index}: {e}")
+
+    # 2. Prova a cercare per nome in modo più aggressivo
+    for i, d in enumerate(devices):
+        if d['max_input_channels'] > 0:
+            lower_name = d['name'].lower()
+            if any(x in lower_name for x in ["usb", "micro", "hw:", "input"]):
+                logger.info(f"Dispositivo compatibile trovato per nome: {d['name']} all'indice {i}")
+                return i, int(d['default_samplerate']), d['name']
+
+    # 3. Prova il default di sistema
+    try:
+        info = sd.query_devices(None, 'input')
+        return None, int(info['default_samplerate']), info['name']
+    except Exception:
+        # 4. Ultimo tentativo: il primo con input > 0
+        for i, d in enumerate(devices):
+            if d['max_input_channels'] > 0:
+                return i, int(d['default_samplerate']), d['name']
+
+    return None, 16000, "Default/Fallback"
+
+AUDIO_DEVICE_INDEX, SAMPLE_RATE, AUDIO_DEVICE_NAME = find_input_device(AUDIO_DEVICE_INDEX)
+logger.info(f"Audio device FINAL: [{AUDIO_DEVICE_INDEX}] {AUDIO_DEVICE_NAME} at {SAMPLE_RATE} Hz")
+
+VAD_THRESHOLD = 0.005  # Soglia di rilevamento voce (0.001-0.01)
+SILENCE_DURATION_SECONDS = 0.6  # Silenzio dopo il parlato per interrompere la trascrizione

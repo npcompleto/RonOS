@@ -1,0 +1,11 @@
+langchain>=0.3.0
+langchain-anthropic>=0.3.0
+langchain-community>=0.3.0
+langchain-imap
+python-dotenv
+python-telegram-bot
+pyyaml>=6.0.2
+sounddevice
+faster_whisper
+scipy
+
