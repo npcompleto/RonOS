@@ -2,10 +2,14 @@ import logging
 import sys
 import os
 import sounddevice as sd
+from dotenv import load_dotenv
+
+# Carica le variabili d'ambiente dal file .env (questo è fondamentale!)
+load_dotenv()
 
 # Configurazione logging immediata (prima degli altri import)
 logging.basicConfig(
-    level=logging.INFO,
+    level=os.getenv("LOG_LEVEL") or logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.FileHandler("ron.log"),
