@@ -30,78 +30,104 @@ class SpeechToTextManager:
 
     def listen(self):
         config.logger.info("Inizio ascolto realtime...")
-        
-        # Setup stream: usiamo float32 direttamente per saltare la conversione 32768.0
+
+        chunk_duration = 0.1  # 100 ms
+        blocksize = int(self.sample_rate * chunk_duration)
+
         self.stream = sd.InputStream(
             samplerate=self.sample_rate,
             channels=1,
-            dtype='float32', 
+            dtype="float32",
             device=config.AUDIO_DEVICE_INDEX,
             callback=self._audio_callback,
-            blocksize=int(self.sample_rate * 0.5) # Processa blocchi da 0.5 secondi
+            blocksize=blocksize,
         )
-        
-        audio_buffer = []
+
         full_text = ""
+
         is_speaking = False
         last_speech_time = time.time()
 
+        # piccolo buffer di audio precedente all'inizio della frase
+        preroll_chunks = 3  # ~300 ms
+        preroll_buffer = []
+
+        # buffer della frase corrente
+        speech_buffer = []
+
         with self.stream:
             try:
-                while True: # Ciclo infinito per realtime vero
+                while True:
                     try:
-                        # Timeout breve per non bloccare il loop
                         audio_chunk = self.audio_queue.get(timeout=1.0)
                     except queue.Empty:
                         continue
 
-                    audio_buffer.append(audio_chunk)
-                    
-                    # Calcolo RMS veloce
-                    rms = np.sqrt(np.mean(audio_chunk**2))
+                    rms = np.sqrt(np.mean(audio_chunk ** 2))
                     current_time = time.time()
+
+                    # mantieni sempre un piccolo storico
+                    preroll_buffer.append(audio_chunk)
+                    if len(preroll_buffer) > preroll_chunks:
+                        preroll_buffer.pop(0)
 
                     if rms > float(config.VAD_THRESHOLD):
                         if not is_speaking:
                             is_speaking = True
-                            audio_buffer = []   # reset qui
                             config.logger.debug("Voce rilevata...")
 
-                        audio_buffer.append(audio_chunk)
+                            # includi un po' di audio precedente
+                            speech_buffer = preroll_buffer.copy()
+
+                        speech_buffer.append(audio_chunk)
                         last_speech_time = current_time
 
                     elif is_speaking:
-                        audio_buffer.append(audio_chunk)
+                        # durante la frase continua ad accumulare anche i chunk di silenzio
+                        speech_buffer.append(audio_chunk)
 
                         if current_time - last_speech_time > config.SILENCE_DURATION_SECONDS:
                             is_speaking = False
                             config.logger.debug("Fine frase, trascrivo...")
-                            
-                            # Concatenazione e trascrizione immediata
-                            segment_audio = np.concatenate(audio_buffer)
-                            transcript = self._transcribe_segment(segment_audio)
-                            config.logger.debug(
-                                f"segment max={np.max(segment_audio):.4f}, "
-                                f"min={np.min(segment_audio):.4f}"
-                            )
 
-                            pcm_audio = np.clip(segment_audio, -1.0, 1.0)
-                            pcm_audio = (pcm_audio * 32767).astype(np.int16)
+                            if speech_buffer:
+                                segment_audio = np.concatenate(speech_buffer)
 
-                            temp_audio_path = f"debug_audio_{int(current_time)}.wav"
-                            scipy.io.wavfile.write(temp_audio_path, self.sample_rate, pcm_audio)
-                            
-                            stripped_transcript = transcript.strip()
-                            if stripped_transcript and stripped_transcript != 'Sottotitoli e revisione a cura di QTSS':
-                                full_text += " " + stripped_transcript
-                                config.logger.info(f"Trascrizione: {stripped_transcript}")
-                            else:
-                                config.logger.debug("Nessuna trascrizione valida ricevuta.")
-                            audio_buffer = [] # Reset buffer per la prossima frase
-            except Exception as e:
-                config.logger.error(f"Errore: {e}")
+                                config.logger.debug(
+                                    f"segment len={len(segment_audio)} "
+                                    f"max={np.max(segment_audio):.4f} "
+                                    f"min={np.min(segment_audio):.4f}"
+                                )
+
+                                # debug wav corretto
+                                pcm_audio = np.clip(segment_audio, -1.0, 1.0)
+                                pcm_audio = (pcm_audio * 32767).astype(np.int16)
+
+                                temp_audio_path = f"debug_audio_{int(current_time)}.wav"
+                                scipy.io.wavfile.write(
+                                    temp_audio_path,
+                                    self.sample_rate,
+                                    pcm_audio
+                                )
+
+                                transcript = self._transcribe_segment(segment_audio)
+                                stripped = transcript.strip()
+
+                                if stripped and stripped != "Sottotitoli e revisione a cura di QTSS":
+                                    full_text += " " + stripped
+                                    config.logger.info(f"Trascrizione: {stripped}")
+                                else:
+                                    config.logger.debug("Nessuna trascrizione valida ricevuta.")
+
+                            speech_buffer = []
+                            preroll_buffer = []
+
             except KeyboardInterrupt:
                 config.logger.info("Stop manuale ricevuto.")
+
+            except Exception as e:
+                config.logger.error(f"Errore: {e}")
+
             finally:
                 config.logger.info(f"Testo totale: {full_text}")
                 return full_text
@@ -115,7 +141,6 @@ class SpeechToTextManager:
         )
 
         texts = [seg.text for seg in segments]
-        config.logger.debug(f"Detected language: {info.language}, prob={info.language_probability}")
-        config.logger.debug(f"Segments raw: {texts}")
+        config.logger.debug(f"Segments: {texts}")
 
         return "".join(texts)
