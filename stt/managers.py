@@ -74,11 +74,17 @@ class SpeechToTextManager:
                             
                             # Concatenazione e trascrizione immediata
                             segment_audio = np.concatenate(audio_buffer)
-                            transcript = self._transcribe_segment(segment_audio)
-                            
-                            # Salva temporaneamente per debug
+
+                            config.logger.debug(
+                                f"segment max={np.max(segment_audio):.4f}, "
+                                f"min={np.min(segment_audio):.4f}"
+                            )
+
+                            pcm_audio = np.clip(segment_audio, -1.0, 1.0)
+                            pcm_audio = (pcm_audio * 32767).astype(np.int16)
+
                             temp_audio_path = f"debug_audio_{int(current_time)}.wav"
-                            scipy.io.wavfile.write(temp_audio_path, self.sample_rate, segment_audio.astype(np.int16))
+                            scipy.io.wavfile.write(temp_audio_path, self.sample_rate, pcm_audio)
                             
                             stripped_transcript = transcript.strip()
                             if stripped_transcript and stripped_transcript != 'Sottotitoli e revisione a cura di QTSS':
