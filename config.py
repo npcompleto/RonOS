@@ -1,6 +1,7 @@
 import logging
 import sys
 import os
+import sounddevice as sd
 
 # Configurazione logging immediata (prima degli altri import)
 logging.basicConfig(
@@ -14,6 +15,7 @@ logging.basicConfig(
 )
 
 logging.getLogger("faster_whisper").setLevel(logging.WARNING)
+logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger("config")
 
 # --- Configurazione Audio ---
