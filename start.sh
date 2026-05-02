@@ -4,7 +4,7 @@
 cd "$(dirname "$0")"
 
 echo "--- Aggiornamento Ron OS ---"
-#git pull
+git pull
 echo "--- Aggiornamento completato ---"
 
 # Crea l'ambiente virtuale se non esiste
