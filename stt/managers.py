@@ -74,7 +74,7 @@ class SpeechToTextManager:
                             
                             # Concatenazione e trascrizione immediata
                             segment_audio = np.concatenate(audio_buffer)
-
+                            transcript = self._transcribe_segment(segment_audio)
                             config.logger.debug(
                                 f"segment max={np.max(segment_audio):.4f}, "
                                 f"min={np.min(segment_audio):.4f}"
