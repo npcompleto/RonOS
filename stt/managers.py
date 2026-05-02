@@ -64,11 +64,16 @@ class SpeechToTextManager:
                     if rms > float(config.VAD_THRESHOLD):
                         if not is_speaking:
                             is_speaking = True
+                            audio_buffer = []   # reset qui
                             config.logger.debug("Voce rilevata...")
+
+                        audio_buffer.append(audio_chunk)
                         last_speech_time = current_time
-                    else:
-                        # Se c'è silenzio e avevamo iniziato a parlare...
-                        if is_speaking and (current_time - last_speech_time > config.SILENCE_DURATION_SECONDS):
+
+                    elif is_speaking:
+                        audio_buffer.append(audio_chunk)
+
+                        if current_time - last_speech_time > config.SILENCE_DURATION_SECONDS:
                             is_speaking = False
                             config.logger.debug("Fine frase, trascrivo...")
                             
