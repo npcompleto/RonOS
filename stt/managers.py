@@ -77,7 +77,7 @@ class SpeechToTextManager:
                             transcript = self._transcribe_segment(segment_audio)
                             
                             # Salva temporaneamente per debug
-                            temp_audio_path = f"debug_audio_{int(start_time)}.wav"
+                            temp_audio_path = f"debug_audio_{int(current_time)}.wav"
                             scipy.io.wavfile.write(temp_audio_path, self.sample_rate, segment_audio.astype(np.int16))
                             
                             stripped_transcript = transcript.strip()
