@@ -16,6 +16,10 @@ class SpeechToTextManager:
         self.audio_queue = queue.Queue()
         self.sample_rate = config.SAMPLE_RATE
         self.stream = None
+        config.logger.debug(f"Device Audio: {config.AUDIO_DEVICE_INDEX}")
+        config.logger.debug(f"Sample Rate: {config.SAMPLE_RATE}")
+        config.logger.debug(f"VAD Threshold: {config.VAD_THRESHOLD}")
+        config.logger.debug(f"Silence Duration Seconds: {config.SILENCE_DURATION_SECONDS}")
 
     def _audio_callback(self, indata, frames, time, status):
         if status:
@@ -70,11 +74,12 @@ class SpeechToTextManager:
                             # Concatenazione e trascrizione immediata
                             segment_audio = np.concatenate(audio_buffer)
                             transcript = self._transcribe_segment(segment_audio)
-                            
-                            if transcript.strip():
-                                full_text += " " + transcript
-                                config.logger.info(f"Trascrizione: {transcript}")
-                            
+                            stripped_transcript = transcript.strip()
+                            if stripped_transcript and stripped_transcript != 'Sottotitoli e revisione a cura di QTSS':
+                                full_text += " " + stripped_transcript
+                                config.logger.info(f"Trascrizione: {stripped_transcript}")
+                            else:
+                                config.logger.debug("Nessuna trascrizione valida ricevuta.")
                             audio_buffer = [] # Reset buffer per la prossima frase
 
             except KeyboardInterrupt:

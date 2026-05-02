@@ -77,5 +77,5 @@ def find_input_device(requested_index):
 AUDIO_DEVICE_INDEX, SAMPLE_RATE, AUDIO_DEVICE_NAME = find_input_device(AUDIO_DEVICE_INDEX)
 logger.info(f"Audio device FINAL: [{AUDIO_DEVICE_INDEX}] {AUDIO_DEVICE_NAME} at {SAMPLE_RATE} Hz")
 
-VAD_THRESHOLD = 0.005  # Soglia di rilevamento voce (0.001-0.01)
-SILENCE_DURATION_SECONDS = 0.6  # Silenzio dopo il parlato per interrompere la trascrizione
+VAD_THRESHOLD = os.getenv("VAD_THRESHOLD") or 0.005  # Soglia di rilevamento voce (0.001-0.01)
+SILENCE_DURATION_SECONDS = os.getenv("SILENCE_DURATION_SECONDS") or 0.6  # Silenzio dopo il parlato per interrompere la trascrizione
