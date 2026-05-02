@@ -102,13 +102,15 @@ class SpeechToTextManager:
                 return full_text
 
     def _transcribe_segment(self, audio_data):
-        # Parametri ottimizzati per velocità:
-        # beam_size=1 è molto più veloce del default 5
-        segments, _ = self.model.transcribe(
+        segments, info = self.model.transcribe(
             audio_data,
             language="it",
-            beam_size=1, 
-            vad_filter=True,
-            vad_parameters=dict(min_silence_duration_ms=500)
+            beam_size=1,
+            vad_filter=False
         )
-        return "".join([seg.text for seg in segments])
+
+        texts = [seg.text for seg in segments]
+        config.logger.debug(f"Detected language: {info.language}, prob={info.language_probability}")
+        config.logger.debug(f"Segments raw: {texts}")
+
+        return "".join(texts)
