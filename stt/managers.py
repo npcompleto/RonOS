@@ -3,6 +3,7 @@ import queue
 import time
 import sounddevice as sd
 import numpy as np
+import scipy
 """
 Whisper
 """
@@ -76,8 +77,8 @@ class SpeechToTextManager:
                             transcript = self._transcribe_segment(segment_audio)
                             
                             # Salva temporaneamente per debug
-                            #temp_audio_path = f"debug_audio_{int(start_time)}.wav"
-                            #scipy.io.wavfile.write(temp_audio_path, self.sample_rate, segment_audio.astype(np.int16))
+                            temp_audio_path = f"debug_audio_{int(start_time)}.wav"
+                            scipy.io.wavfile.write(temp_audio_path, self.sample_rate, segment_audio.astype(np.int16))
                             
                             stripped_transcript = transcript.strip()
                             if stripped_transcript and stripped_transcript != 'Sottotitoli e revisione a cura di QTSS':
