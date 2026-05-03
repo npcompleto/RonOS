@@ -26,6 +26,7 @@ class Transcriber:
     def __init__(self, model_size, language):
         self._model_size = model_size
         self.mode = None
+        self._language = language
         
         if HAILO_AVAILABLE and GENAI_AVAILABLE:
             self.hef_path =os.path.join(".", f"whisper_{model_size}.hef")
@@ -53,7 +54,7 @@ class Transcriber:
             logger.info(f"Caricamento modello Whisper '{model_size}' (compute_type=int8)...")
             self._model = WhisperModel(model_size, device="cpu", compute_type="int8")
             logger.info("Modello Whisper caricato.")
-            self._language = language
+            
     
     def transcribe(self, audio):
         if self.mode == "genai":
