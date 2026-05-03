@@ -30,7 +30,9 @@ import numpy as np
 import sounddevice as sd
 import webrtcvad
 from scipy.signal import lfilter, firwin
-from faster_whisper import WhisperModel
+
+from stt.models.whispher import Transcriber
+
 
 
 logger = logging.getLogger(__name__)
@@ -106,10 +108,7 @@ class SpeechToTextManager:
                 f"resampling non necessario."
             )
 
-        # Modello Whisper (caricamento eager: meglio fallire subito)
-        logger.info(f"Caricamento modello Whisper '{model_size}' (compute_type=int8)...")
-        self._model = WhisperModel(model_size, device="cpu", compute_type="int8")
-        logger.info("Modello Whisper caricato.")
+        self._transcriber = Transcriber(model_size, language)
 
         # WebRTC VAD
         self._vad = webrtcvad.Vad(vad_aggressiveness)
@@ -375,15 +374,10 @@ class SpeechToTextManager:
             try:
                 duration = len(audio_segment) / self.TARGET_SAMPLE_RATE
                 logger.info(f"📡 Trascrizione in corso ({duration:.1f}s)...")
-                segments, info = self._model.transcribe(
-                    audio_segment,
-                    language=self._language,
-                    # NO vad_filter: WebRTC VAD ha già segmentato il parlato.
-                    # Il doppio filtraggio svuota i segmenti corti.
-                )
+                segments, info = self._transcriber.transcribe(audio_segment)
                 text = "".join(seg.text for seg in segments).strip()
 
-                if text:
+                if text and "sottotitoli" not in text.lower() and "buon appetito!" not in text.lower():
                     logger.info(f"✅ Trascrizione: \"{text}\"")
                     if self._on_transcription:
                         try:
