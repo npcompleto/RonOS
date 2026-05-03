@@ -62,7 +62,7 @@ class Transcriber:
             text = self.model.generate_all_text(
                 audio_data=audio,
                 task=Speech2TextTask.TRANSCRIBE,
-                language=language
+                language=self._language
             )
             # Create a dummy segment object to match faster-whisper API expected by stt_manager.py
             class Segment:
