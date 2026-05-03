@@ -28,7 +28,7 @@ class Transcriber:
         self.mode = None
         
         if HAILO_AVAILABLE and GENAI_AVAILABLE:
-            self.hef_path =os.path.join("models", f"whisper_{model_size}.hef")
+            self.hef_path =os.path.join(".", f"whisper_{model_size}.hef")
 
             logger.info(f"Initializing Hailo Whisper model using hailo_platform ({self.hef_path})...")
         
