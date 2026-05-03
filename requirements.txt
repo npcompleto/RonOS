@@ -6,16 +6,9 @@ python-dotenv
 python-telegram-bot
 pyyaml>=6.0.2
 numpy
-sounddevice
 scipy
-
-torch --index-url https://download.pytorch.org/whl/cpu
-torchaudio --index-url https://download.pytorch.org/whl/cpu
-
+sounddevice
+webrtcvad
 faster-whisper
-
-silero-vad
-
-tqdm
-
-
+setuptools<81
+wheel
