@@ -41,6 +41,7 @@ if __name__ == "__main__":
 
     try:
         stt.start()
+        utils.play_audio(config.SOUNDS["startup"], 0.4)
         logger.info("Ron OS started")
         stt.wait()  # Blocca finché non viene interrotto con CTRL+C
     except KeyboardInterrupt:

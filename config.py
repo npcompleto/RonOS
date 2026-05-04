@@ -82,4 +82,4 @@ SILENCE_DURATION_SECONDS = os.getenv("SILENCE_DURATION_SECONDS") or 0.6  # Silen
 
 WAKE_WORDS = ["ciao"]
 
-SOUNDS = { "wake" : "sounds/bubblepop_in.mp3", "ack" : "sounds/bubblepop_out.mp3"} 
+SOUNDS = { "wake" : "sounds/bubblepop_in.mp3", "ack" : "sounds/bubblepop_out.mp3", "startup": "sounds/startup.mp3"} 

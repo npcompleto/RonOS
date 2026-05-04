@@ -1,35 +1,45 @@
+import pygame
 import os
-import subprocess
-import logging
-from datetime import datetime
+import config
 
-def play_audio2(filepath):
-    """Riproduce un file audio specificato. Ritorna il codice di uscita del processo."""
-    if os.path.exists(filepath):
-        try:
-            process = subprocess.run(["ffplay", "-nodisp", "-autoexit", filepath], 
-                           stderr=subprocess.DEVNULL, 
-                           stdout=subprocess.DEVNULL)
-            return process.returncode
-        except Exception as e:
-            logging.error(f"Errore durante la riproduzione di {filepath}: {e}")
-            return -1
-    else:
-        logging.error(f"File audio non trovato: {filepath}")
-        return -1
+def play_audio(filepath, volume=0.8):
+    """
+    Riproduce un file audio (MP3 o WAV) utilizzando pygame.
+    
+    Args:
+        filepath (str): Percorso del file audio.
+        volume (float): Volume da 0.0 a 1.0. Default 0.8.
+    
+    Returns:
+        bool: True se la riproduzione è riuscita, False altrimenti.
+    """
+    if not os.path.exists(filepath):
+        config.logger.error(f"File audio non trovato: {filepath}")
+        return False
 
-def play_audio(filepath):
-    """Riproduce un file audio usando mpg123 (più leggero per MP3)."""
-    if os.path.exists(filepath):
-        try:
-            # mpg123 è nativo per MP3 e molto affidabile su RPi
-            process = subprocess.run(["mpg123", "-q", filepath], 
-                           stderr=subprocess.DEVNULL, 
-                           stdout=subprocess.DEVNULL)
-            return process.returncode
-        except Exception as e:
-            logging.error(f"Errore durante la riproduzione con mpg123: {e}")
-            return -1
-    else:
-        logging.error(f"File audio non trovato: {filepath}")
-        return -1
+    try:
+        # Inizializza il mixer se non è già attivo
+        if not pygame.mixer.get_init():
+            # Parametri ottimizzati per Raspberry Pi
+            pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=4096)
+
+        # Carica il file (supporta MP3 e WAV)
+        pygame.mixer.music.load(filepath)
+        
+        # Imposta il volume
+        pygame.mixer.music.set_volume(volume)
+        
+        config.logger.info(f"Riproduzione in corso: {filepath} (Volume: {int(volume*100)}%)")
+        
+        # Avvia la riproduzione
+        pygame.mixer.music.play()
+
+        # Attendi la fine del brano (bloccante)
+        while pygame.mixer.music.get_busy():
+            pygame.time.Clock().tick(10) # Riduce il carico sulla CPU nel loop
+            
+        return True
+
+    except Exception as e:
+        config.logger.error(f"Errore durante la riproduzione con pygame: {e}")
+        return False

@@ -69,13 +69,13 @@ class RobotFace:
         self._t = {
             "eye_w": 0.30 * r,             # Ingrandito (da 0.15 a 0.20)
             "eye_h": 0.48 * r,             # Ingrandito (da 0.22 a 0.28)
-            "eye_y": 0.38 * self.height,
+            "eye_y": 0.5 * self.height,
             "eye_rot_l": 0.0,
             "eye_rot_r": 0.0,
             "eye_radius": 0.1 * r,        # Arrotondamento leggermente maggiore
             "mouth_w": 0.22 * r,
             "mouth_h": 0.07 * r,
-            "mouth_y": 0.60 * self.height, # Più in alto (da 0.66 a 0.60)
+            "mouth_y": 0.70 * self.height, # Più in alto (da 0.66 a 0.60)
             "mouth_curve": 0.3,
             "mouth_open": 1.0,
         }
@@ -214,6 +214,16 @@ if __name__ == "__main__":
         time.sleep(4)
         robot.set_speaking(False)
         robot.set_expression(Expression.NEUTRAL)
+        time.sleep(2)
+        robot.set_expression(Expression.SAD)
+        time.sleep(2)
+        robot.set_expression(Expression.THOUGHTFUL)
+        time.sleep(5)
+        robot.set_expression(Expression.IN_LOVE)
+        time.sleep(5)
+        robot.set_expression(Expression.ANGRY)
+        time.sleep(2)
+        robot.set_expression(Expression.SLEEPING)
         time.sleep(2)
     except KeyboardInterrupt:
         pass
