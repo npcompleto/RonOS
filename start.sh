@@ -24,7 +24,7 @@ conda activate "$ENV_NAME"
 # Installa/Aggiorna dipendenze
 echo "--- Verifica dipendenze... ---"
 python -m pip install --quiet --upgrade pip setuptools wheel
-python -m pip install -r requirements.txt
+python -m pip install --quiet -r requirements.txt
 
 # Funzione per pulire i processi all'uscita (CTRL+C)
 cleanup() {
