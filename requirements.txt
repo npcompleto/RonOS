@@ -12,3 +12,4 @@ webrtcvad
 faster-whisper
 setuptools<81
 wheel
+vosk
