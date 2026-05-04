@@ -12,13 +12,15 @@ def on_transcription(text: str) -> None:
     """Callback invocata ad ogni trascrizione completata."""
     logger.info(f"📝 Trascrizione ricevuta: {text}")
     utils.play_audio(config.SOUNDS["ack"])
-    robot_face.set_expression(Expression.NEUTRAL)
+    if robot_face:
+        robot_face.set_expression(Expression.NEUTRAL)
     # TODO: qui puoi inoltrare il testo all'agente LLM
 
 def on_wake(text: str) -> None:
     """Callback invocata quando viene rilevata una parola di risveglio."""
     utils.play_audio(config.SOUNDS["wake"])
-    robot_face.set_expression(Expression.THOUGHTFUL)
+    if robot_face:
+        robot_face.set_expression(Expression.THOUGHTFUL)
     logger.info(f" Ron OS is awake!")
 
 if __name__ == "__main__":
