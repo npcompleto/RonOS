@@ -32,9 +32,9 @@ if __name__ == "__main__":
         language="it",
         vad_aggressiveness=1,
     )
-
-    robot_face = RobotFaceManager(fullscreen="--windowed" not in sys.argv, bg_color=(10, 10, 20))
-    robot_face.start()
+    if "--no-face" not in sys.argv:
+        robot_face = RobotFaceManager(fullscreen="--windowed" not in sys.argv, bg_color=(10, 10, 20))
+        robot_face.start()
 
     try:
         stt.start()
