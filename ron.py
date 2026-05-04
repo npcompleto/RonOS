@@ -1,5 +1,7 @@
 import config
+import sys
 from stt.stt_manager import SpeechToTextManager
+from display.robot_face import RobotFaceManager
 
 logger = config.logger
 
@@ -24,6 +26,9 @@ if __name__ == "__main__":
         language="it",
         vad_aggressiveness=1,
     )
+
+    robot_face = RobotFaceManager(fullscreen="--windowed" not in sys.argv, bg_color=(10, 10, 20))
+    robot_face.start()
 
     try:
         stt.start()
