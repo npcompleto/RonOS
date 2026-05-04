@@ -31,6 +31,7 @@ if __name__ == "__main__":
         model_size="small",
         language="it",
         vad_aggressiveness=1,
+        save_audio="--save-audio" in sys.argv
     )
     if "--no-face" not in sys.argv:
         robot_face = RobotFaceManager(fullscreen="--windowed" not in sys.argv, bg_color=(10, 10, 20))

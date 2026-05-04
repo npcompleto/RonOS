@@ -41,7 +41,7 @@ trap cleanup SIGINT
 export DISPLAY=:0
 
 echo "--- Avvio Ron OS... ---"
-python ron.py "$1" "$2" "$3" &
+python ron.py "$1" "$2" "$3" "$4" "$5" "$6" &
 RON_PID=$!
 
 echo "--- Ron OS è attivo. Premi CTRL+C per terminare. ---"

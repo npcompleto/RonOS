@@ -10,7 +10,7 @@ load_dotenv()
 # Configurazione logging immediata (prima degli altri import)
 logging.basicConfig(
     level=os.getenv("LOG_LEVEL") or logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    format='[%(module)s][%(funcName)s] %(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.FileHandler("ron.log"),
         logging.StreamHandler(sys.stdout)
