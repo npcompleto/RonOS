@@ -407,7 +407,7 @@ class SpeechToTextManager:
                 segments, info = self._transcriber.transcribe(audio_segment)
                 text = "".join(seg.text for seg in segments).strip()
 
-                if text and "sottotitoli" not in text.lower() and "buon appetito!" not in text.lower():
+                if text and "sottotitoli" not in text.lower() and "buon appetito!" not in text.lower() and "alla prossima!" not in text.lower():
                     logger.info(f"✅ Trascrizione: \"{text}\"")
                     if self._on_transcription:
                         try:

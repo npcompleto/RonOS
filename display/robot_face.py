@@ -54,33 +54,41 @@ class RobotFace:
 
         # Parametri correnti e target
         self._eye_w = self._eye_h = self._eye_rot_l = self._eye_rot_r = 0.0
-        self._eye_spacing = 0.30 * self._ref
+        self._eye_spacing = 0.40 * self._ref
         self._eye_y = self._eye_radius = 0.0
         self._mouth_w = self._mouth_h = self._mouth_y = self._mouth_curve = self._mouth_open = 0.0
         
         self._t = {}
         self._set_defaults()
         self._update_targets()
-        self._sync_instantly() # Evita animazione di "nascita" all'avvio
+        self._sync_instantly()
 
     def _set_defaults(self):
+        """Valori di base aggiornati: occhi più grandi e bocca più alta."""
         r = self._ref
         self._t = {
-            "eye_w": 0.15 * r, "eye_h": 0.22 * r, "eye_y": 0.38 * self.height,
-            "eye_rot_l": 0.0, "eye_rot_r": 0.0, "eye_radius": 0.04 * r,
-            "mouth_w": 0.22 * r, "mouth_h": 0.07 * r, "mouth_y": 0.66 * self.height,
-            "mouth_curve": 0.3, "mouth_open": 1.0,
+            "eye_w": 0.30 * r,             # Ingrandito (da 0.15 a 0.20)
+            "eye_h": 0.48 * r,             # Ingrandito (da 0.22 a 0.28)
+            "eye_y": 0.38 * self.height,
+            "eye_rot_l": 0.0,
+            "eye_rot_r": 0.0,
+            "eye_radius": 0.1 * r,        # Arrotondamento leggermente maggiore
+            "mouth_w": 0.22 * r,
+            "mouth_h": 0.07 * r,
+            "mouth_y": 0.60 * self.height, # Più in alto (da 0.66 a 0.60)
+            "mouth_curve": 0.3,
+            "mouth_open": 1.0,
         }
 
     def _update_targets(self):
         self._set_defaults()
         r, e = self._ref, self._expression
         if e == Expression.HAPPY:
-            self._t["eye_h"], self._t["mouth_curve"], self._t["mouth_h"] = 0.15*r, 1.0, 0.10*r
+            self._t["eye_h"], self._t["mouth_curve"], self._t["mouth_h"] = 0.20*r, 1.0, 0.10*r
         elif e == Expression.SAD:
             self._t["eye_rot_l"], self._t["eye_rot_r"], self._t["mouth_curve"] = 15.0, -15.0, -0.8
         elif e == Expression.ANGRY:
-            self._t["eye_h"], self._t["eye_rot_l"], self._t["eye_rot_r"] = 0.13*r, -18.0, 18.0
+            self._t["eye_h"], self._t["eye_rot_l"], self._t["eye_rot_r"] = 0.18*r, -18.0, 18.0
             self._t["mouth_curve"], self._t["mouth_w"] = -0.5, 0.18*r
         elif e == Expression.SLEEPING:
             self._t["eye_h"], self._t["mouth_h"], self._t["mouth_open"] = 0.018*r, 0.012*r, 0.3
@@ -94,16 +102,14 @@ class RobotFace:
             self._update_targets()
 
     def _update(self, dt):
-        # Smoothing
         for k, v in self._t.items():
             curr = getattr(self, f"_{k}")
             setattr(self, f"_{k}", curr + (v - curr) * (1.0 - math.exp(-self._spd * dt)))
         
-        # Blink logic
         if self._auto_blink and self._expression != Expression.SLEEPING:
             self._blink_timer += dt
             if self._blink_timer >= self._next_blink:
-                self._blink_val = 1.0 # Blink istantaneo semplificato o gestisci ciclo
+                self._blink_val = 1.0
                 self._blink_timer = 0.0
                 self._next_blink = random.uniform(2.5, 5.0)
             self._blink_val = max(0, self._blink_val - dt * 10.0)
@@ -159,24 +165,18 @@ class RobotFaceManager:
         self._process = None
 
     def _target(self, conn, kwargs):
-        """Loop eseguito nel processo secondario."""
         face = RobotFace(**kwargs)
         running = True
         while running:
             dt = face.clock.tick(face.fps) / 1000.0
-            
-            # Gestione Comandi
             while conn.poll():
                 cmd, val = conn.recv()
                 if cmd == "EXPR": face.set_expression(val)
                 elif cmd == "SPEAK": face._speaking = val
                 elif cmd == "BLINK": face._auto_blink = val
                 elif cmd == "STOP": running = False
-            
-            # Gestione Eventi Pygame
             for ev in pygame.event.get():
                 if ev.type == pygame.QUIT: running = False
-
             face._update(dt)
             face._draw()
             pygame.display.flip()
@@ -204,32 +204,18 @@ class RobotFaceManager:
 # ====================================================================
 
 if __name__ == "__main__":
-    # Inizializza il manager (non blocca il thread principale)
     robot = RobotFaceManager(fullscreen=False, bg_color=(10, 10, 20))
-    
-    print("Avvio volto in processo dedicato...")
     robot.start()
 
     try:
-        # Qui il thread principale è LIBERO di fare altro
-        time.sleep(2)
+        time.sleep(1)
         robot.set_expression(Expression.HAPPY)
-        
-        print("Il robot parla mentre il thread principale conta:")
         robot.set_speaking(True)
-        
-        for i in range(1, 6):
-            print(f"Conto: {i}")
-            time.sleep(1)
-            if i == 3:
-                robot.set_expression(Expression.ANGRY)
-        
+        time.sleep(4)
         robot.set_speaking(False)
-        robot.set_expression(Expression.SLEEPING)
+        robot.set_expression(Expression.NEUTRAL)
         time.sleep(2)
-
     except KeyboardInterrupt:
         pass
     finally:
-        print("Chiusura in corso...")
         robot.stop()

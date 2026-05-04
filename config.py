@@ -81,3 +81,5 @@ VAD_THRESHOLD = os.getenv("VAD_THRESHOLD") or 0.005  # Soglia di rilevamento voc
 SILENCE_DURATION_SECONDS = os.getenv("SILENCE_DURATION_SECONDS") or 0.6  # Silenzio dopo il parlato per interrompere la trascrizione
 
 WAKE_WORDS = ["ciao"]
+
+SOUNDS = { "wake" : "sounds/bubblepop_in.mp3", "ack" : "sounds/bubblepop_out.mp3"} 
