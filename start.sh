@@ -48,3 +48,4 @@ echo "--- Ron OS è attivo. Premi CTRL+C per terminare. ---"
 
 # Attende la fine del processo
 wait $RON_PID
+killall python
