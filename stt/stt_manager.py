@@ -252,7 +252,7 @@ class SpeechToTextManager:
                 segments, _ = self._transcriber.transcribe(audio_segment)
                 text = "".join(seg.text for seg in segments).strip()
                 
-                hallucinations = ["sottotitoli", "buon appetito", "alla prossima", "grazie per la visione"]
+                hallucinations = ["sottotitoli", "buon appetito", "alla prossima", "grazie per la visione","..."]
                 is_hallucination = any(h in text.lower() for h in hallucinations)
 
                 if text and not is_hallucination:
