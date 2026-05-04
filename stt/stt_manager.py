@@ -33,7 +33,9 @@ from scipy.signal import lfilter, firwin
 
 from stt.models.whispher import Transcriber
 
-
+from vosk import Model, KaldiRecognizer
+import json
+import config
 
 logger = logging.getLogger(__name__)
 
@@ -70,13 +72,16 @@ class SpeechToTextManager:
         self,
         config,
         on_transcription: Optional[Callable[[str], None]] = None,
+        on_wake: Optional[Callable[[str], None]] = None,
         model_size: str = "small",
         language: str = "it",
         vad_aggressiveness: int = 1,
     ):
         self._config = config
         self._on_transcription = on_transcription
+        self._on_wake = on_wake
         self._language = language
+        self._is_awake = False
 
         # Parametri hardware
         self._input_sr: int = getattr(config, "SAMPLE_RATE", 44100)
@@ -126,6 +131,16 @@ class SpeechToTextManager:
         self._is_speaking = False
         self._stream: Optional[sd.InputStream] = None
         self._threads: list[threading.Thread] = []
+
+        lista_parole = config.WAKE_WORDS + ["uhm", "ehm", "mmm", "ok", "allora", "ecco", "[unk]"]
+
+        # Converti la lista in una stringa JSON
+        stringa_grammar = json.dumps(lista_parole)
+
+        voskmodel = Model(model_name=f"vosk-model-small-{self._language}-0.22")
+        self._wakeword_recognizer = KaldiRecognizer(voskmodel, self.TARGET_SAMPLE_RATE, stringa_grammar)
+        self._wakeword_recognizer.SetWords(False)
+        self._wakeword_recognizer.SetPartialWords(False)
 
     # ------------------------------------------------------------------ #
     #                        LIFECYCLE PUBBLICO                           #
@@ -284,6 +299,20 @@ class SpeechToTextManager:
             except queue.Empty:
                 continue
 
+            if not self._is_awake:
+                pcm16 = (np.clip(chunk_raw, -1.0, 1.0) * 32767).astype(np.int16)
+                result_json = self._wakeword_recognizer.AcceptWaveform(pcm16.tobytes())
+                if result_json:
+                    result = json.loads(self._wakeword_recognizer.Result())
+                    text = result.get("text", "").lower().strip()
+                    if text:
+                        config.logger.debug(f"Vosk ha sentito: {text}")
+                        if text in config.WAKE_WORDS:
+                            self._is_awake = True
+                            self._on_wake(text)
+                            
+                continue
+
             # --- Resampling veloce (filtro AA + np.interp) ---
             chunk_16k = self._resample_chunk(chunk_raw)
             if len(chunk_16k) == 0:
@@ -338,6 +367,7 @@ class SpeechToTextManager:
                         )
                         try:
                             self._transcription_queue.put_nowait(full_audio)
+                            # TODO usare qui VOSK se ancora non è stata rilevata la wake word
                         except queue.Full:
                             logger.warning(
                                 "Coda trascrizioni piena, segmento scartato."
@@ -382,6 +412,7 @@ class SpeechToTextManager:
                     if self._on_transcription:
                         try:
                             self._on_transcription(text)
+                            self._is_awake = False
                         except Exception as cb_err:
                             logger.error(
                                 f"Errore nel callback di trascrizione: {cb_err}"

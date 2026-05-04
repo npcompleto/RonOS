@@ -79,3 +79,5 @@ logger.info(f"Audio device FINAL: [{AUDIO_DEVICE_INDEX}] {AUDIO_DEVICE_NAME} at 
 
 VAD_THRESHOLD = os.getenv("VAD_THRESHOLD") or 0.005  # Soglia di rilevamento voce (0.001-0.01)
 SILENCE_DURATION_SECONDS = os.getenv("SILENCE_DURATION_SECONDS") or 0.6  # Silenzio dopo il parlato per interrompere la trascrizione
+
+WAKE_WORDS = ["ciao"]

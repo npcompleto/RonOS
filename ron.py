@@ -9,6 +9,9 @@ def on_transcription(text: str) -> None:
     logger.info(f"📝 Trascrizione ricevuta: {text}")
     # TODO: qui puoi inoltrare il testo all'agente LLM
 
+def on_wake(text: str) -> None:
+    """Callback invocata quando viene rilevata una parola di risveglio."""
+    logger.info(f" Ron OS is awake!")
 
 if __name__ == "__main__":
     logger.info("Ron OS starting...")
@@ -16,6 +19,7 @@ if __name__ == "__main__":
     stt = SpeechToTextManager(
         config,
         on_transcription=on_transcription,
+        on_wake=on_wake,
         model_size="small",
         language="it",
         vad_aggressiveness=1,
