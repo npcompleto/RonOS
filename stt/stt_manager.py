@@ -50,7 +50,7 @@ class SpeechToTextManager:
 
         # Configurazione salvataggio debug
         if self._save_audio:
-            self._debug_dir = "tmp"
+            self._debug_dir = "debug_audio"
             os.makedirs(self._debug_dir, exist_ok=True)
             logger.info(f"💾 Modalità debug audio attiva. File salvati in: {self._debug_dir}")
 
@@ -100,7 +100,6 @@ class SpeechToTextManager:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
         filename = os.path.join(self._debug_dir, f"{prefix}_{timestamp}.wav")
         
-        # Conversione in PCM 16-bit
         pcm_data = (np.clip(audio_data, -1.0, 1.0) * 32767).astype(np.int16)
         
         try:
@@ -145,13 +144,25 @@ class SpeechToTextManager:
             self.stop()
 
     def stop(self) -> None:
+        """Ferma la pipeline STT in modo pulito."""
         if not self._running.is_set(): return
         self._running.clear()
         if self._stream:
-            self._stream.stop()
-            self._stream.close()
+            try:
+                self._stream.stop()
+                self._stream.close()
+            except: pass
         for t in self._threads: t.join(timeout=2.0)
         logger.info("STT arrestato.")
+
+    def wait(self) -> None:
+        """Blocca il thread principale finché la pipeline è attiva."""
+        try:
+            while self._running.is_set():
+                time.sleep(0.1)
+        except KeyboardInterrupt:
+            logger.info("Interruzione rilevata (CTRL+C)...")
+            self.stop()
 
     # ------------------------------------------------------------------ #
     #                            PROCESSING                              #
@@ -183,7 +194,6 @@ class SpeechToTextManager:
             except queue.Empty:
                 continue
 
-            # Resampling necessario per entrambi i motori (Vosk/Whisper)
             chunk_16k = self._resample_chunk(chunk_raw)
             if len(chunk_16k) == 0: continue
 
@@ -192,14 +202,12 @@ class SpeechToTextManager:
                 if self._wakeword_recognizer.AcceptWaveform(pcm16.tobytes()):
                     result = json.loads(self._wakeword_recognizer.Result())
                     text = result.get("text", "").lower().strip()
-                    if text in getattr(self._config, "WAKE_WORDS", []):
-                        # Salviamo l'audio che ha triggerato la wake word
+                    if any(word in text for word in getattr(self._config, "WAKE_WORDS", [])):
                         if self._save_audio: self._save_wav(chunk_16k, "wake_trigger")
                         self._is_awake = True
                         if self._on_wake: self._on_wake(text)
                 continue
 
-            # Logica VAD per Whisper
             accumulator = np.concatenate([accumulator, chunk_16k])
             while len(accumulator) >= self.VAD_FRAME_SAMPLES:
                 frame = accumulator[: self.VAD_FRAME_SAMPLES]
@@ -225,7 +233,6 @@ class SpeechToTextManager:
                         duration = len(full_audio) / self.TARGET_SAMPLE_RATE
 
                         if duration >= self.MIN_SPEECH_DURATION_S:
-                            # --- SALVATAGGIO AUDIO POST-VAD ---
                             if self._save_audio:
                                 self._save_wav(full_audio, "whisper_segment")
                             
@@ -245,7 +252,6 @@ class SpeechToTextManager:
                 segments, _ = self._transcriber.transcribe(audio_segment)
                 text = "".join(seg.text for seg in segments).strip()
                 
-                # Filtraggio allucinazioni comuni Whisper
                 hallucinations = ["sottotitoli", "buon appetito", "alla prossima", "grazie per la visione"]
                 is_hallucination = any(h in text.lower() for h in hallucinations)
 
