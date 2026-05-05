@@ -4,7 +4,7 @@ import config
 
 def wake_up_audio():
     # Crea un suono silenzioso di 0.1 secondi
-    silence = pygame.mixer.Sound(buffer=bytes([0] * 1000))
+    silence = pygame.mixer.Sound(buffer=bytes([0] * 3000))
     silence.play()
 
 def play_audio(filepath, volume=0.8):
