@@ -30,6 +30,7 @@ python -m pip install --quiet -r requirements.txt
 cleanup() {
     echo -e "\n--- Spegnimento Ron OS in corso... ---"
     kill $RON_PID 2>/dev/null
+    killall python 2>/dev/null
     wait $RON_PID 2>/dev/null
     echo "--- Sistemi spenti. ---"
     exit
