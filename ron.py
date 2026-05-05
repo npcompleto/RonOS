@@ -48,7 +48,9 @@ def on_expression(expression: str) -> None:
                 "ANGRY": Expression.ANGRY,
                 "HAPPY": Expression.HAPPY,
                 "IN_LOVE": Expression.IN_LOVE,
-                "SLEEPING": Expression.SLEEPING
+                "SLEEPING": Expression.SLEEPING,
+                "SAD": Expression.SAD,
+                
             }
             expr = expr_map.get(expression.upper(), Expression.NEUTRAL)
             logger.info(f"Espressione: {expression} -> {expr}")
