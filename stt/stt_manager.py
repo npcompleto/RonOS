@@ -111,6 +111,7 @@ class SpeechToTextManager:
             logger.debug(f"Audio salvato correttamente: {filename}")
         except Exception as e:
             logger.error(f"Errore durante il salvataggio WAV: {e}")
+        return filename
 
     # ------------------------------------------------------------------ #
     #                        LIFECYCLE PUBBLICO                           #
@@ -234,7 +235,8 @@ class SpeechToTextManager:
 
                         if duration >= self.MIN_SPEECH_DURATION_S:
                             if self._save_audio:
-                                self._save_wav(full_audio, "whisper_segment")
+                                filename = self._save_wav(full_audio, "whisper_segment")
+                                utils.play_audio(filename)
                             
                             try:
                                 self._transcription_queue.put_nowait(full_audio)
