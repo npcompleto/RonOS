@@ -1,6 +1,7 @@
 import config
 import sys
 from stt.stt_manager import SpeechToTextManager
+from tts.tts_manager import TextToSpeechManager
 from display.robot_face import RobotFaceManager, Expression
 import utils
 
@@ -23,6 +24,9 @@ def on_wake(text: str) -> None:
 
 if __name__ == "__main__":
     logger.info("Ron OS starting...")
+    if "--no-face" not in sys.argv:
+        robot_face = RobotFaceManager(fullscreen="--windowed" not in sys.argv, bg_color=(10, 10, 20))
+        robot_face.start()
 
     stt = SpeechToTextManager(
         config,
@@ -33,13 +37,14 @@ if __name__ == "__main__":
         vad_aggressiveness=1,
         save_audio="--save-audio" in sys.argv
     )
-    if "--no-face" not in sys.argv:
-        robot_face = RobotFaceManager(fullscreen="--windowed" not in sys.argv, bg_color=(10, 10, 20))
-        robot_face.start()
+
+    tts = TextToSpeechManager()
+    tts.speak("ciao")
+    
 
     try:
         stt.start()
-        utils.play_audio(config.SOUNDS["startup"], 0.4)
+        #utils.play_audio(config.SOUNDS["startup"], 0.4)
         logger.info("Ron OS started")
         stt.wait()  # Blocca finché non viene interrotto con CTRL+C
     except KeyboardInterrupt:

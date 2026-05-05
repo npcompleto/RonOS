@@ -83,3 +83,11 @@ SILENCE_DURATION_SECONDS = os.getenv("SILENCE_DURATION_SECONDS") or 0.6  # Silen
 WAKE_WORDS = ["ciao"]
 
 SOUNDS = { "wake" : "sounds/bubblepop_in.mp3", "ack" : "sounds/bubblepop_out.mp3", "startup": "sounds/startup.mp3"} 
+
+PIPER_MODEL_DIR = "tts/models/piper"
+PIPER_MODEL_NAME = "it_IT-paola-medium.onnx"
+#PIPER_MODEL_NAME = "it_IT_RON.onnx"
+PIPER_MODEL_PATH = os.path.join(PIPER_MODEL_DIR, PIPER_MODEL_NAME)
+PIPER_CONFIG_PATH = PIPER_MODEL_PATH + ".json"
+PIPER_MODEL_URL = f"https://huggingface.co/rhasspy/piper-voices/resolve/main/it/it_IT/paola/medium/{PIPER_MODEL_NAME}?download=true"
+PIPER_CONFIG_URL = f"https://huggingface.co/rhasspy/piper-voices/resolve/main/it/it_IT/paola/medium/{PIPER_MODEL_NAME}.json?download=true"
