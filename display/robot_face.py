@@ -18,9 +18,9 @@ class Expression(Enum):
     THOUGHTFUL = "thoughtful"
     IN_LOVE = "in_love"
     SLEEPING = "sleeping"
+    LOADING = "loading"
 
 class RobotFace:
-    """Renders the face. To be used inside a dedicated process."""
     def __init__(self, bg_color=(20, 20, 30), eye_color=(0, 210, 255), 
                  mouth_color=(0, 210, 255), fps=60, auto_blink=True, fullscreen=True):
         pygame.init()
@@ -52,6 +52,12 @@ class RobotFace:
         self._speak_phase = 0.0
         self._spd = 5.0
 
+        # Animazioni Speciali
+        self._nod_timer = 0.0
+        self._nod_active = False
+        self._eye_offset_y = 0.0
+        self._loading_angle = 0.0 
+
         # Parametri correnti e target
         self._eye_w = self._eye_h = self._eye_rot_l = self._eye_rot_r = 0.0
         self._eye_spacing = 0.40 * self._ref
@@ -64,18 +70,17 @@ class RobotFace:
         self._sync_instantly()
 
     def _set_defaults(self):
-        """Valori di base aggiornati: occhi più grandi e bocca più alta."""
         r = self._ref
         self._t = {
-            "eye_w": 0.30 * r,             # Ingrandito (da 0.15 a 0.20)
-            "eye_h": 0.48 * r,             # Ingrandito (da 0.22 a 0.28)
+            "eye_w": 0.30 * r,
+            "eye_h": 0.48 * r,
             "eye_y": 0.5 * self.height,
             "eye_rot_l": 0.0,
             "eye_rot_r": 0.0,
-            "eye_radius": 0.1 * r,        # Arrotondamento leggermente maggiore
+            "eye_radius": 0.1 * r,
             "mouth_w": 0.22 * r,
             "mouth_h": 0.07 * r,
-            "mouth_y": 0.70 * self.height, # Più in alto (da 0.66 a 0.60)
+            "mouth_y": 0.70 * self.height,
             "mouth_curve": 0.3,
             "mouth_open": 1.0,
         }
@@ -90,6 +95,19 @@ class RobotFace:
         elif e == Expression.ANGRY:
             self._t["eye_h"], self._t["eye_rot_l"], self._t["eye_rot_r"] = 0.18*r, -18.0, 18.0
             self._t["mouth_curve"], self._t["mouth_w"] = -0.5, 0.18*r
+        elif e == Expression.THOUGHTFUL:
+            # Occhi a fessura e bocca piccola/piatta
+            self._t["eye_h"] = 0.05 * r
+            self._t["eye_w"] = 0.35 * r
+            self._t["mouth_w"] = 0.10 * r
+            self._t["mouth_h"] = 0.01 * r
+            self._t["mouth_curve"] = 0.0
+        elif e == Expression.IN_LOVE:
+            self._t["eye_w"], self._t["eye_h"] = 0.35*r, 0.35*r
+            self._t["mouth_curve"], self._t["mouth_h"] = 1.2, 0.12*r
+        elif e == Expression.LOADING:
+            self._t["eye_w"], self._t["eye_h"] = 0.25*r, 0.25*r
+            self._t["mouth_w"], self._t["mouth_h"], self._t["mouth_curve"] = 0.1*r, 0.01*r, 0.0
         elif e == Expression.SLEEPING:
             self._t["eye_h"], self._t["mouth_h"], self._t["mouth_open"] = 0.018*r, 0.012*r, 0.3
 
@@ -101,43 +119,93 @@ class RobotFace:
             self._expression = expression
             self._update_targets()
 
+    def start_nod(self):
+        self._nod_active = True
+        self._nod_timer = 0.0
+
     def _update(self, dt):
         for k, v in self._t.items():
             curr = getattr(self, f"_{k}")
             setattr(self, f"_{k}", curr + (v - curr) * (1.0 - math.exp(-self._spd * dt)))
         
-        if self._auto_blink and self._expression != Expression.SLEEPING:
+        if self._expression == Expression.LOADING:
+            self._loading_angle += dt * 360
+        
+        if self._nod_active:
+            self._nod_timer += dt
+            nod_speed, nod_amplitude = 12.0, self._ref * 0.08
+            self._eye_offset_y = math.sin(self._nod_timer * nod_speed) * nod_amplitude
+            if self._nod_timer > 1.5:
+                self._nod_active = False
+                self._eye_offset_y = 0.0
+        
+        # Blink (disabilitato in LOADING, IN_LOVE e THOUGHTFUL se troppo sottile)
+        block_blink = [Expression.SLEEPING, Expression.IN_LOVE, Expression.LOADING]
+        if self._auto_blink and self._expression not in block_blink:
             self._blink_timer += dt
             if self._blink_timer >= self._next_blink:
                 self._blink_val = 1.0
                 self._blink_timer = 0.0
                 self._next_blink = random.uniform(2.5, 5.0)
             self._blink_val = max(0, self._blink_val - dt * 10.0)
+        else:
+            self._blink_val = 0
 
         if self._speaking: self._speak_phase += dt * 12.0
 
     def _draw(self):
         self.screen.fill(self.bg_color)
-        cx, cy = self.width // 2, int(self._eye_y)
+        cx = self.width // 2
+        cy = int(self._eye_y + self._eye_offset_y)
         for side in [-1, 1]:
-            self._draw_eye(cx + side * int(self._eye_spacing), cy, self._eye_rot_l if side < 0 else self._eye_rot_r)
-        self._draw_mouth()
+            self._draw_eye(cx + side * int(self._eye_spacing), cy, side)
+        self._draw_mouth(int(self._mouth_y + self._eye_offset_y * 0.5))
 
-    def _draw_eye(self, cx, cy, rot):
-        w, h = int(self._eye_w), int(self._eye_h * (1.0 - self._blink_val))
+    def _draw_eye(self, cx, cy, side):
+        pulse = 1.0
+        color = self.eye_color
+        
+        if self._expression == Expression.IN_LOVE:
+            pulse = 1.0 + 0.15 * math.sin(time.time() * 12)
+            color = (255, 40, 100)
+        
+        w = int(self._eye_w * pulse)
+        h = int(self._eye_h * (1.0 - self._blink_val) * pulse)
         if h < 2: h = 2
-        surf = pygame.Surface((w*2, h*2), pygame.SRCALPHA)
-        rect = pygame.Rect(w//2, h//2, w, h)
-        pygame.draw.rect(surf, self.eye_color, rect, border_radius=int(self._eye_radius))
-        if abs(rot) > 0.1: surf = pygame.transform.rotate(surf, rot)
+        
+        surf = pygame.Surface((w * 2, h * 2), pygame.SRCALPHA)
+        rect = pygame.Rect(w // 2, h // 2, w, h)
+        
+        if self._expression == Expression.LOADING:
+            start_angle = math.radians(self._loading_angle if side > 0 else -self._loading_angle)
+            end_angle = start_angle + math.pi
+            pygame.draw.arc(surf, color, rect, start_angle, end_angle, 6)
+        elif self._expression == Expression.IN_LOVE:
+            self._draw_heart(surf, color, rect)
+        else:
+            pygame.draw.rect(surf, color, rect, border_radius=int(self._eye_radius))
+            rot = self._eye_rot_l if side < 0 else self._eye_rot_r
+            if abs(rot) > 0.1: surf = pygame.transform.rotate(surf, rot)
+            
         self.screen.blit(surf, surf.get_rect(center=(cx, cy)))
 
-    def _draw_mouth(self):
-        cx, cy, w, h = self.width//2, int(self._mouth_y), int(self._mouth_w), int(self._mouth_h)
+    def _draw_heart(self, surface, color, rect):
+        x, y, w, h = rect
+        pts = [(x, y + h * 0.35), (x + w // 2, y + h), (x + w, y + h * 0.35)]
+        pygame.draw.polygon(surface, color, pts)
+        r = w // 4
+        pygame.draw.circle(surface, color, (x + r, y + r), r)
+        pygame.draw.circle(surface, color, (x + w - r, y + r), r)
+
+    def _draw_mouth(self, mouth_y):
+        cx, cy, w, h = self.width//2, mouth_y, int(self._mouth_w), int(self._mouth_h)
         if self._speaking: h = int(h * (0.3 + 0.7 * abs(math.sin(self._speak_phase))))
+        
+        # Se la bocca è quasi piatta, disegna una linea semplice
         if h < 3:
             pygame.draw.line(self.screen, self.mouth_color, (cx-w//2, cy), (cx+w//2, cy), 3)
             return
+            
         pts = []
         n = 30
         if self._mouth_curve >= 0:
@@ -152,13 +220,11 @@ class RobotFace:
             pts.extend([(cx+w//2, cy), (cx-w//2, cy)])
         if len(pts) > 2: pygame.draw.polygon(self.screen, self.mouth_color, pts)
 
-
 # ====================================================================
-# GESTORE DEL PROCESSO (RobotFaceManager)
+# GESTORE DEL PROCESSO
 # ====================================================================
 
 class RobotFaceManager:
-    """Interfaccia per controllare il robot da un altro processo."""
     def __init__(self, **kwargs):
         self._kwargs = kwargs
         self._parent_conn, self._child_conn = mp.Pipe()
@@ -173,7 +239,7 @@ class RobotFaceManager:
                 cmd, val = conn.recv()
                 if cmd == "EXPR": face.set_expression(val)
                 elif cmd == "SPEAK": face._speaking = val
-                elif cmd == "BLINK": face._auto_blink = val
+                elif cmd == "NOD": face.start_nod()
                 elif cmd == "STOP": running = False
             for ev in pygame.event.get():
                 if ev.type == pygame.QUIT: running = False
@@ -199,8 +265,11 @@ class RobotFaceManager:
     def set_speaking(self, status: bool):
         self._parent_conn.send(("SPEAK", status))
 
+    def nod(self):
+        self._parent_conn.send(("NOD", None))
+
 # ====================================================================
-# ESEMPIO DI UTILIZZO
+# ESEMPIO
 # ====================================================================
 
 if __name__ == "__main__":
@@ -208,23 +277,14 @@ if __name__ == "__main__":
     robot.start()
 
     try:
-        time.sleep(1)
-        robot.set_expression(Expression.HAPPY)
-        robot.set_speaking(True)
-        time.sleep(4)
-        robot.set_speaking(False)
-        robot.set_expression(Expression.NEUTRAL)
-        time.sleep(2)
-        robot.set_expression(Expression.SAD)
-        time.sleep(2)
+        print("Stato: THOUGHTFUL (occhi a fessura, bocca piccola)...")
         robot.set_expression(Expression.THOUGHTFUL)
         time.sleep(5)
-        robot.set_expression(Expression.IN_LOVE)
-        time.sleep(5)
-        robot.set_expression(Expression.ANGRY)
+        
+        print("Stato: HAPPY...")
+        robot.set_expression(Expression.HAPPY)
         time.sleep(2)
-        robot.set_expression(Expression.SLEEPING)
-        time.sleep(2)
+        
     except KeyboardInterrupt:
         pass
     finally:
