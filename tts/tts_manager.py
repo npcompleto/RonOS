@@ -3,9 +3,6 @@ import queue
 import threading
 import hashlib
 import requests
-import sounddevice as sd
-import soundfile as sf
-import numpy as np
 from piper import PiperVoice
 import config
 from utils import play_audio
@@ -88,18 +85,3 @@ class TextToSpeechManager:
                     
         except Exception as e:
             config.logger.error(f"Errore durante la sintesi vocale: {e}")
-
-# --- ESEMPIO D'USO ---
-if __name__ == "__main__":
-    # Esempio modello: it_IT-riccardo-x_low
-    URL = config.PIPER_MODEL_URL
-    PATH = config.PIPER_MODEL_PATH
-
-    tts = TextToSpeechManager(model_path=PATH, model_url=URL)
-
-    # Frasi predefinite per il warm-up
-    tts.warm_up(["Ciao", "Dimmi", "Un attimo"])
-
-    # Test
-    tts.speak("Ciao")
-    tts.speak("Sto usando il pacchetto Piper installato tramite pip.")
