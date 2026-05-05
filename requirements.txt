@@ -17,3 +17,4 @@ pygame
 requests
 piper-tts
 playwright
+yt_dlp

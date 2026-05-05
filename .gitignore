@@ -219,5 +219,6 @@ __marimo__/
 *.hef
 tmp/**
 *.wav
+*.mp3
 agents/memory/**
 ronos.db

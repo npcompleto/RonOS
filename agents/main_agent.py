@@ -1,6 +1,7 @@
 from agents.base_agent import BaseAgent
 from agents.interpreter_agent import InterpreterAgent
 from agents.school_agent import SchoolAgent
+from agents.music_agent import MusicAgent
 from langchain_core.tools import tool
 from tools.system import shutdown
 
@@ -17,6 +18,12 @@ def call_school_agent(query: str):
     result = school_agent.agent.run(query)
     return result.content
 
+music_agent = MusicAgent()
+@tool("music_agent", description="Utilizza questo tool quando l'utente chiede di riprodurre musica, playlist o canzoni o fermare la riproduzione")
+def call_music_agent(query: str):
+    result = music_agent.agent.run(query)
+    return result.content
+
 class MainAgent(BaseAgent):
     def __init__(self):
         super().__init__(
@@ -29,8 +36,10 @@ class MainAgent(BaseAgent):
                 "[[NEUTRAL]],[[HAPPY]],[[SAD]],[[ANGRY]],[[THOUGHTFUL]],[[IN_LOVE]],[[SLEEPING]],[[NOD]]",
                 "Usa [[NOD]] quando vuoi esprimere accordo"
                 "Chiudi sempre con [[NEUTRAL]]",
-                "Ad esempio: Ciao! [[HAPPY]] Sono Ron, felicissimo di conoscerti! [[NEUTRAL]]"
+                "Ad esempio: Ciao! [[HAPPY]] Sono Ron, felicissimo di conoscerti! [[NEUTRAL]]",
+                "Quando devi rispondere usando un tool, esegui prima il tool e poi rispondi all'utente",
+                
             ],
-            tools=[call_interpreter_agent, call_school_agent, shutdown],
+            tools=[call_interpreter_agent, call_school_agent, call_music_agent, shutdown],
             enable_memory=True
         )
