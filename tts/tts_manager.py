@@ -11,11 +11,14 @@ import wave
 
 
 class TextToSpeechManager:
-    def __init__(self, cache_dir="./speech_cache"):
+    def __init__(self, cache_dir="./speech_cache", expression_callback=None, start_speaking_callback=None, stop_speaking_callback=None):
         self.model_path = config.PIPER_MODEL_PATH
         self.model_url = config.PIPER_MODEL_URL
         self.config_path = f"{self.model_path}.json"
         self.cache_dir = cache_dir
+        self.expression_callback = expression_callback
+        self.start_speaking_callback = start_speaking_callback
+        self.stop_speaking_callback = stop_speaking_callback
         
         self.queue = queue.Queue()
         self.stop_event = threading.Event()
@@ -52,14 +55,27 @@ class TextToSpeechManager:
         with open(output_path, "wb") as wav_file:
             self.voice.synthesize(text, wav_file)
 
+    def _split_text_and_tags(self, text):
+        # Il pattern identifica due tipi di blocchi:
+        # 1. [[TAG]] -> (\[\[.*?\]\])
+        # 2. Testo che finisce con punteggiatura o fine riga -> ([^\[]+?([.!?]+|\Z))
+        pattern = r'(\[\[.*?\]\])|([^\[]+?([.!?]+|(?=\[\[)|\Z))'
+        
+        # Cerchiamo tutte le corrispondenze
+        matches = [m.group().strip() for m in re.finditer(pattern, text)]
+        
+        # Pulizia finale per rimuovere stringhe vuote
+        return [m for m in matches if m]
+
     def speak(self, text, filename="speech_chunk.wav", play=True):
         if not isinstance(text, str):
             text = str(text)
         
         # Pulizia testo
-        text = re.sub(r'[^\w\s\d.,!?;:()\'\"-/]', '', text)
+        #text = re.sub(r'[^\w\s\d.,!?;:()\'\"-/]', '', text)
         text = text.replace("**", "")
-        sentences = [s.strip() for s in re.split(r'(?<=[!.;?])\s+', text) if s.strip()]
+        sentences = self._split_text_and_tags(text)
+        config.logger.info(f"Sentences: {sentences}")
         
         if not sentences:
             return
@@ -69,19 +85,27 @@ class TextToSpeechManager:
         try:
             for i, sentence in enumerate(sentences):
                 config.logger.info(f"Sintesi pezzo {i+1}/{len(sentences)}: '{sentence}'")
-        
-                # Apri come file binario normale, NON con wave.open
-                with wave.open(filename, "wb") as wav_file:
-                   for j, audio_chunk in enumerate(self.voice.synthesize(sentence)):
-                        if j == 0:
-                            wav_file.setnchannels(audio_chunk.sample_channels)
-                            wav_file.setsampwidth(audio_chunk.sample_width)
-                            wav_file.setframerate(audio_chunk.sample_rate)
+                if sentence.startswith("[[") and sentence.endswith("]]"):
+                    if self.expression_callback:
+                        self.expression_callback(sentence[2:-2])
+                    continue
+                else:
+                    # Apri come file binario normale, NON con wave.open
+                    with wave.open(filename, "wb") as wav_file:
+                        for j, audio_chunk in enumerate(self.voice.synthesize(sentence)):
+                                if j == 0:
+                                    wav_file.setnchannels(audio_chunk.sample_channels)
+                                    wav_file.setsampwidth(audio_chunk.sample_width)
+                                    wav_file.setframerate(audio_chunk.sample_rate)
 
-                        wav_file.writeframes(audio_chunk.audio_int16_bytes)
-                
-                if play:
-                    play_audio(filename)
+                                wav_file.writeframes(audio_chunk.audio_int16_bytes)
+                        
+                        if self.start_speaking_callback:
+                            self.start_speaking_callback()
+                        if play:
+                            play_audio(filename)
+                        if self.stop_speaking_callback:
+                            self.stop_speaking_callback()
                     
         except Exception as e:
             config.logger.error(f"Errore durante la sintesi vocale: {e}")

@@ -202,7 +202,7 @@ class SpeechToTextManager:
             chunk_16k = self._resample_chunk(chunk_raw)
             if len(chunk_16k) == 0: continue
 
-            if pygame.mixer.music.get_busy():
+            if not pygame.mixer.get_init() or pygame.mixer.music.get_busy():
                 logger.debug("Audio is playing, skipping STT")
                 continue
 

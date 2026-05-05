@@ -219,3 +219,4 @@ __marimo__/
 *.hef
 tmp/**
 *.wav
+agents/memory/**

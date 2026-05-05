@@ -5,10 +5,12 @@ from tts.tts_manager import TextToSpeechManager
 from display.robot_face import RobotFaceManager, Expression
 import utils
 import time
+from agents.main_agent import MainAgent
 
 logger = config.logger
 
 robot_face = None
+assistant = None
 
 def on_transcription(text: str) -> None:
     """Callback invocata ad ogni trascrizione completata."""
@@ -22,6 +24,45 @@ def on_wake(text: str) -> None:
     if robot_face:
         robot_face.set_expression(Expression.THOUGHTFUL)
     logger.info(f" Ron OS is awake!")
+
+
+def on_expression(expression: str) -> None:
+    try:
+        """Callback per cambiare l'espressione del robot."""
+        logger.info(f"Cambio espressione: {expression}")
+        if robot_face:
+            # Mappa i nomi delle espressioni a quelle della classe RobotFaceManager
+            # Se hai bisogno di espressioni custom, devi aggiungerle nel file 
+            # display/robot_face.py e nel config.py
+            expr_map = {
+                "NEUTRAL": Expression.NEUTRAL,
+                "THOUGHTFUL": Expression.THOUGHTFUL,
+                "ANGRY": Expression.ANGRY,
+                "HAPPY": Expression.HAPPY
+            }
+            expr = expr_map.get(expression.upper(), Expression.NEUTRAL)
+            logger.info(f"Espressione: {expression} -> {expr}")
+            robot_face.set_expression(expr)
+    except Exception as e:
+        logger.error(f"Errore durante il cambio espressione: {e}")
+    
+def on_start_speaking() -> None:
+    if robot_face:
+        robot_face.set_speaking(True)
+
+def on_stop_speaking() -> None:
+    if robot_face:
+        robot_face.set_speaking(False)
+        
+
+# Definiamo la funzione di callback per elaborare il messaggio
+def process_message(user_message: str) -> str:
+    print(f"\n[Telegram] Messaggio ricevuto: {user_message}")
+    
+    # Qui passiamo la chat all'agente principale
+    # L'agente restituirà la sua risposta
+    response = assistant.agent.run(user_message)
+    return response.content
 
 if __name__ == "__main__":
     logger.info("Ron OS starting...")
@@ -40,12 +81,19 @@ if __name__ == "__main__":
         save_audio="--save-audio" in sys.argv
     )
 
-    tts = TextToSpeechManager()
+    tts = TextToSpeechManager(
+        expression_callback=on_expression, 
+        start_speaking_callback=on_start_speaking,
+        stop_speaking_callback=on_stop_speaking)
+
+    # Inizializza l'agente principale
+    assistant = MainAgent()
     
+
 
     try:
         stt.start()
-        tts.speak("ciao")
+        tts.speak(process_message("Sei stato appena attivato. Salutami brevemente (massimo 10 parole). In modo simpatico."))
         #utils.play_audio(config.SOUNDS["startup"], 0.4)
         logger.info("Ron OS started")
         stt.wait()  # Blocca finché non viene interrotto con CTRL+C
