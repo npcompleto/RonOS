@@ -27,8 +27,8 @@ def play_audio(filepath, volume=0.8):
         if not pygame.mixer.get_init():
             # Parametri ottimizzati per Raspberry Pi
             pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=4096)
-            wake_up_audio()
-
+            
+        wake_up_audio()
         # Carica il file (supporta MP3 e WAV)
         pygame.mixer.music.load(filepath)
         
