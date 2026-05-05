@@ -2,6 +2,11 @@ import pygame
 import os
 import config
 
+def wake_up_audio():
+    # Crea un suono silenzioso di 0.1 secondi
+    silence = pygame.mixer.Sound(buffer=bytes([0] * 1000))
+    silence.play()
+
 def play_audio(filepath, volume=0.8):
     """
     Riproduce un file audio (MP3 o WAV) utilizzando pygame.
@@ -22,6 +27,7 @@ def play_audio(filepath, volume=0.8):
         if not pygame.mixer.get_init():
             # Parametri ottimizzati per Raspberry Pi
             pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=4096)
+            wake_up_audio()
 
         # Carica il file (supporta MP3 e WAV)
         pygame.mixer.music.load(filepath)
