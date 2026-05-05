@@ -103,7 +103,7 @@ class TextToSpeechManager:
                         if self.start_speaking_callback:
                             self.start_speaking_callback()
                         if play:
-                            play_audio(filename)
+                            play_audio(filename, volume=0.5)
                         if self.stop_speaking_callback:
                             self.stop_speaking_callback()
                     

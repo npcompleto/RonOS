@@ -1,5 +1,14 @@
 from agents.base_agent import BaseAgent
+from agents.interpreter import InterpreterAgent
+from langchain_core.tools import tool
 
+
+interpreter = InterpreterAgent()
+
+@tool("interpreter", description="Correggi possibili errori dovuto al riconoscimento vocale")
+def call_interpreter_agent(query: str):
+    result = interpreter.run(query)
+    return result["messages"][-1].content
 
 class MainAgent(BaseAgent):
     def __init__(self):
@@ -8,9 +17,11 @@ class MainAgent(BaseAgent):
             role="Sei l'agente principale del sistema. Rispondi all'utente in modo utile e amichevole. Hai a disposizione un team di agenti se necessario.",
             instructions=[
                 "Rispondi direttamente alle domande semplici."
-                "Intervalla la risposta con stringhe di sentimento racchiuse tra doppie parentesi quadre. I valori che hai a disposizione sono: [[NEUTRAL]],[[HAPPY]],[[SAD]],[[ANGRY]],[[THOUGHTFUL]],[[IN_LOVE]],[[SLEEPING]],[[NOD_A]]",
+                "Intervalla la risposta con stringhe di sentimento racchiuse tra doppie parentesi quadre. I valori che hai a disposizione sono:",
+                "[[NEUTRAL]],[[HAPPY]],[[SAD]],[[ANGRY]],[[THOUGHTFUL]],[[IN_LOVE]],[[SLEEPING]],[[NOD]]",
                 "Chiudi sempre con [[NEUTRAL]]"
                 "Ad esempio: Ciao! [[HAPPY]] Sono Ron, felicissimo di conoscerti! [[NEUTRAL]]"
             ],
+            tools=[call_interpreter_agent],
             enable_memory=True
         )

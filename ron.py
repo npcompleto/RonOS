@@ -11,18 +11,23 @@ logger = config.logger
 
 robot_face = None
 assistant = None
+tts = None
 
 def on_transcription(text: str) -> None:
     """Callback invocata ad ogni trascrizione completata."""
     logger.info(f"📝 Trascrizione ricevuta: {text}")
     if robot_face:
         robot_face.set_expression(Expression.NEUTRAL)
-    # TODO: qui puoi inoltrare il testo all'agente LLM
+    utils.play_audio(config.SOUNDS["ack"])
+    response = process_message(text)
+    if response:
+        tts.speak(response)
 
 def on_wake(text: str) -> None:
     """Callback invocata quando viene rilevata una parola di risveglio."""
     if robot_face:
         robot_face.set_expression(Expression.THOUGHTFUL)
+        utils.play_audio(config.SOUNDS["wake"])
     logger.info(f" Ron OS is awake!")
 
 
@@ -57,10 +62,7 @@ def on_stop_speaking() -> None:
 
 # Definiamo la funzione di callback per elaborare il messaggio
 def process_message(user_message: str) -> str:
-    print(f"\n[Telegram] Messaggio ricevuto: {user_message}")
-    
-    # Qui passiamo la chat all'agente principale
-    # L'agente restituirà la sua risposta
+    logger.info(f"Messaggio ricevuto: {user_message}")
     response = assistant.agent.run(user_message)
     return response.content
 
