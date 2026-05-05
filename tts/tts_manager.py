@@ -91,15 +91,17 @@ class TextToSpeechManager:
                     continue
                 else:
                     # Apri come file binario normale, NON con wave.open
+                    has_data = False
                     with wave.open(filename, "wb") as wav_file:
                         for j, audio_chunk in enumerate(self.voice.synthesize(sentence)):
-                                if j == 0:
-                                    wav_file.setnchannels(audio_chunk.sample_channels)
-                                    wav_file.setsampwidth(audio_chunk.sample_width)
-                                    wav_file.setframerate(audio_chunk.sample_rate)
+                            has_data = True
+                            if j == 0:
+                                wav_file.setnchannels(audio_chunk.sample_channels)
+                                wav_file.setsampwidth(audio_chunk.sample_width)
+                                wav_file.setframerate(audio_chunk.sample_rate)
 
-                                wav_file.writeframes(audio_chunk.audio_int16_bytes)
-                        
+                            wav_file.writeframes(audio_chunk.audio_int16_bytes)
+                    if has_data:
                         if self.start_speaking_callback:
                             self.start_speaking_callback()
                         if play:
