@@ -48,4 +48,6 @@ if __name__ == "__main__":
         pass
     finally:
         stt.stop()
+        if robot_face:
+            robot_face.stop()
         logger.info("Ron OS shut down.")
