@@ -91,17 +91,19 @@ class TextToSpeechManager:
                     continue
                 else:
                     # Apri come file binario normale, NON con wave.open
-                    has_data = False
                     with wave.open(filename, "wb") as wav_file:
+                        has_alnum = any(char.isalnum() for char in sentence)
+                        if not has_alnum:
+                            config.logger.warning(f"Nessun dato alfanumerico in '{sentence}', salto la sintesi")
+                            continue
                         for j, audio_chunk in enumerate(self.voice.synthesize(sentence)):
-                            has_data = True
-                            if j == 0:
-                                wav_file.setnchannels(audio_chunk.sample_channels)
-                                wav_file.setsampwidth(audio_chunk.sample_width)
-                                wav_file.setframerate(audio_chunk.sample_rate)
+                                if j == 0:
+                                    wav_file.setnchannels(audio_chunk.sample_channels)
+                                    wav_file.setsampwidth(audio_chunk.sample_width)
+                                    wav_file.setframerate(audio_chunk.sample_rate)
 
-                            wav_file.writeframes(audio_chunk.audio_int16_bytes)
-                    if has_data:
+                                wav_file.writeframes(audio_chunk.audio_int16_bytes)
+                        
                         if self.start_speaking_callback:
                             self.start_speaking_callback()
                         if play:
