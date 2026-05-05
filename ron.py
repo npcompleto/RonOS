@@ -100,7 +100,10 @@ if __name__ == "__main__":
     assistant = MainAgent()
     
     # Inizializza e avvia il bot Telegram
-    bot = TelegramBot(agent_callback=process_message)
+    if "--no-telegram" not in sys.argv:
+        telegram_bot = TelegramBot(agent_callback=process_message)
+    else:
+        telegram_bot = None
     
 
 
@@ -109,7 +112,8 @@ if __name__ == "__main__":
         tts.speak(process_message("Sei stato appena attivato. Salutami brevemente (massimo 10 parole). In modo simpatico."))
         #utils.play_audio(config.SOUNDS["startup"], 0.4)
         logger.info("Ron OS started")
-        bot.run()
+        if telegram_bot:
+            telegram_bot.run()
         stt.wait()  # Blocca finché non viene interrotto con CTRL+C
     except KeyboardInterrupt:
         pass
