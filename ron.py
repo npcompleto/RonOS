@@ -29,11 +29,6 @@ if __name__ == "__main__":
         robot_face = RobotFaceManager(fullscreen="--windowed" not in sys.argv, bg_color=(10, 10, 20))
         robot_face.start()
 
-    if robot_face:
-        robot_face.set_expression(Expression.IN_LOVE)
-        time.sleep(5)
-        robot_face.set_expression(Expression.HAPPY)
-
 
     stt = SpeechToTextManager(
         config,
@@ -46,11 +41,11 @@ if __name__ == "__main__":
     )
 
     tts = TextToSpeechManager()
-    tts.speak("ciao")
     
 
     try:
         stt.start()
+        tts.speak("ciao")
         #utils.play_audio(config.SOUNDS["startup"], 0.4)
         logger.info("Ron OS started")
         stt.wait()  # Blocca finché non viene interrotto con CTRL+C

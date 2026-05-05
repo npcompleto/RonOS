@@ -19,6 +19,9 @@ from vosk import Model, KaldiRecognizer
 
 logger = logging.getLogger(__name__)
 
+#FIXME bruttino
+import pygame
+
 class SpeechToTextManager:
     """
     Gestore Speech-to-Text ottimizzato per Raspberry Pi con supporto Debug Audio.
@@ -198,6 +201,10 @@ class SpeechToTextManager:
 
             chunk_16k = self._resample_chunk(chunk_raw)
             if len(chunk_16k) == 0: continue
+
+            if pygame.mixer.music.get_busy():
+                logger.debug("Audio is playing, skipping STT")
+                continue
 
             if not self._is_awake:
                 pcm16 = (np.clip(chunk_16k, -1.0, 1.0) * 32767).astype(np.int16)
