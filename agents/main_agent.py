@@ -1,13 +1,20 @@
 from agents.base_agent import BaseAgent
-from agents.interpreter import InterpreterAgent
+from agents.interpreter_agent import InterpreterAgent
+from agents.school_agent import SchoolAgent
 from langchain_core.tools import tool
+from tools.system import shutdown
 
 
 interpreter = InterpreterAgent()
-
 @tool("interpreter", description="Correggi possibili errori dovuto al riconoscimento vocale")
 def call_interpreter_agent(query: str):
     result = interpreter.agent.run(query)
+    return result.content
+
+school_agent = SchoolAgent()
+@tool("school_agent", description="Utilizza questo tool quando devi rispondere a domande o richieste che riguardano la scuola. Ad esempio: compiti, interrogazioni, verifiche, orari, voti, professori, ecc.")
+def call_school_agent(query: str):
+    result = school_agent.agent.run(query)
     return result.content
 
 class MainAgent(BaseAgent):
@@ -24,6 +31,6 @@ class MainAgent(BaseAgent):
                 "Chiudi sempre con [[NEUTRAL]]",
                 "Ad esempio: Ciao! [[HAPPY]] Sono Ron, felicissimo di conoscerti! [[NEUTRAL]]"
             ],
-            tools=[call_interpreter_agent],
+            tools=[call_interpreter_agent, call_school_agent, shutdown],
             enable_memory=True
         )

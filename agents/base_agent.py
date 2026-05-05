@@ -42,6 +42,9 @@ class LangChainAgentWrapper:
             f.write(f"Utente: {user_input}\n")
             f.write(f"Bot: {bot_output}\n\n")
 
+    def _get_today_date_and_time_and_weekday(self) -> str:
+        return datetime.now().strftime("%Y-%m-%d %H:%M:%S %A")
+
     def run(self, input_text: str, session_id: str = "default"):
         # Leggiamo la memoria dal file MD
         history_context = self._read_memory()
@@ -55,6 +58,8 @@ class LangChainAgentWrapper:
             
         if history_context:
             full_input += f"Ecco il contesto delle conversazioni precedenti di oggi:\n\n{history_context}\n---\n"
+
+        full_input += f"\n\Oggi è {self._get_today_date_and_time_and_weekday()}\n\n"
         
         full_input += f"Utente: {input_text}"
 

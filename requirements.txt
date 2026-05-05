@@ -16,3 +16,4 @@ vosk
 pygame
 requests
 piper-tts
+playwright

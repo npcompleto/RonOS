@@ -6,6 +6,7 @@ from display.robot_face import RobotFaceManager, Expression
 import utils
 import time
 from agents.main_agent import MainAgent
+from integrations.telegram_bot import TelegramBot
 
 logger = config.logger
 
@@ -98,6 +99,9 @@ if __name__ == "__main__":
     # Inizializza l'agente principale
     assistant = MainAgent()
     
+    # Inizializza e avvia il bot Telegram
+    bot = TelegramBot(agent_callback=process_message)
+    
 
 
     try:
@@ -105,6 +109,7 @@ if __name__ == "__main__":
         tts.speak(process_message("Sei stato appena attivato. Salutami brevemente (massimo 10 parole). In modo simpatico."))
         #utils.play_audio(config.SOUNDS["startup"], 0.4)
         logger.info("Ron OS started")
+        bot.run()
         stt.wait()  # Blocca finché non viene interrotto con CTRL+C
     except KeyboardInterrupt:
         pass
