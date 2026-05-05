@@ -2,6 +2,7 @@ import pygame
 import math
 import time
 import random
+import os
 import multiprocessing as mp
 from enum import Enum
 from typing import Tuple
@@ -41,6 +42,16 @@ class RobotFace:
         self.fps = fps
         self.clock = pygame.time.Clock()
         self._ref = min(self.width, self.height)
+
+        # Caricamento Asset Cuore (SVG)
+        self.heart_path = os.path.join("display", "assets", "heart.svg")
+        self.heart_original = None
+        if os.path.exists(self.heart_path):
+            try:
+                # Pygame carica gli SVG trasformandoli in Surface
+                self.heart_original = pygame.image.load(self.heart_path).convert_alpha()
+            except Exception as e:
+                print(f"Errore nel caricamento di heart.svg: {e}")
 
         # State & Animation
         self._expression = Expression.NEUTRAL
@@ -96,7 +107,6 @@ class RobotFace:
             self._t["eye_h"], self._t["eye_rot_l"], self._t["eye_rot_r"] = 0.18*r, -18.0, 18.0
             self._t["mouth_curve"], self._t["mouth_w"] = -0.5, 0.18*r
         elif e == Expression.THOUGHTFUL:
-            # Occhi a fessura e bocca piccola/piatta
             self._t["eye_h"] = 0.05 * r
             self._t["eye_w"] = 0.35 * r
             self._t["mouth_w"] = 0.10 * r
@@ -139,7 +149,6 @@ class RobotFace:
                 self._nod_active = False
                 self._eye_offset_y = 0.0
         
-        # Blink (disabilitato in LOADING, IN_LOVE e THOUGHTFUL se troppo sottile)
         block_blink = [Expression.SLEEPING, Expression.IN_LOVE, Expression.LOADING]
         if self._auto_blink and self._expression not in block_blink:
             self._blink_timer += dt
@@ -191,17 +200,24 @@ class RobotFace:
 
     def _draw_heart(self, surface, color, rect):
         x, y, w, h = rect
-        pts = [(x, y + h * 0.35), (x + w // 2, y + h), (x + w, y + h * 0.35)]
-        pygame.draw.polygon(surface, color, pts)
-        r = w // 4
-        pygame.draw.circle(surface, color, (x + r, y + r), r)
-        pygame.draw.circle(surface, color, (x + w - r, y + r), r)
+        if self.heart_original:
+            # Scaliamo l'SVG caricato alle dimensioni animate attuali
+            scaled_heart = pygame.transform.smoothscale(self.heart_original, (w, h))
+            # (Opzionale) Se vuoi forzare il colore dell'SVG via codice:
+            # scaled_heart.fill(color, special_flags=pygame.BLEND_RGBA_MULT)
+            surface.blit(scaled_heart, (x, y))
+        else:
+            # Fallback se il file non esiste
+            pts = [(x, y + h * 0.35), (x + w // 2, y + h), (x + w, y + h * 0.35)]
+            pygame.draw.polygon(surface, color, pts)
+            r = w // 4
+            pygame.draw.circle(surface, color, (x + r, y + r), r)
+            pygame.draw.circle(surface, color, (x + w - r, y + r), r)
 
     def _draw_mouth(self, mouth_y):
         cx, cy, w, h = self.width//2, mouth_y, int(self._mouth_w), int(self._mouth_h)
         if self._speaking: h = int(h * (0.3 + 0.7 * abs(math.sin(self._speak_phase))))
         
-        # Se la bocca è quasi piatta, disegna una linea semplice
         if h < 3:
             pygame.draw.line(self.screen, self.mouth_color, (cx-w//2, cy), (cx+w//2, cy), 3)
             return
@@ -221,7 +237,7 @@ class RobotFace:
         if len(pts) > 2: pygame.draw.polygon(self.screen, self.mouth_color, pts)
 
 # ====================================================================
-# GESTORE DEL PROCESSO
+# GESTORE DEL PROCESSO (RobotFaceManager rimane invariato)
 # ====================================================================
 
 class RobotFaceManager:
@@ -267,25 +283,3 @@ class RobotFaceManager:
 
     def nod(self):
         self._parent_conn.send(("NOD", None))
-
-# ====================================================================
-# ESEMPIO
-# ====================================================================
-
-if __name__ == "__main__":
-    robot = RobotFaceManager(fullscreen=False, bg_color=(10, 10, 20))
-    robot.start()
-
-    try:
-        print("Stato: THOUGHTFUL (occhi a fessura, bocca piccola)...")
-        robot.set_expression(Expression.THOUGHTFUL)
-        time.sleep(5)
-        
-        print("Stato: HAPPY...")
-        robot.set_expression(Expression.HAPPY)
-        time.sleep(2)
-        
-    except KeyboardInterrupt:
-        pass
-    finally:
-        robot.stop()

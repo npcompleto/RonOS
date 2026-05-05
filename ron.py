@@ -4,6 +4,7 @@ from stt.stt_manager import SpeechToTextManager
 from tts.tts_manager import TextToSpeechManager
 from display.robot_face import RobotFaceManager, Expression
 import utils
+import time
 
 logger = config.logger
 
@@ -27,6 +28,12 @@ if __name__ == "__main__":
     if "--no-face" not in sys.argv:
         robot_face = RobotFaceManager(fullscreen="--windowed" not in sys.argv, bg_color=(10, 10, 20))
         robot_face.start()
+
+    if robot_face:
+        robot_face.set_expression(Expression.IN_LOVE)
+        time.sleep(5)
+        robot_face.set_expression(Expression.HAPPY)
+
 
     stt = SpeechToTextManager(
         config,
