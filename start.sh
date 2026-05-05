@@ -6,7 +6,7 @@ cd "$(dirname "$0")"
 ENV_NAME="ron311"
 
 echo "--- Aggiornamento Ron OS ---"
-#git pull
+git pull
 echo "--- Aggiornamento completato ---"
 
 # Inizializza conda nel contesto dello script
