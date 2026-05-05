@@ -1,6 +1,7 @@
 import pygame
 import os
 import config
+import time
 
 def wake_up_audio():
     """Invia un segnale minimo per forzare l'attivazione della scheda audio."""
