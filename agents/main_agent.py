@@ -20,6 +20,7 @@ class MainAgent(BaseAgent):
                 "Limita al massimo le informazioni non importanti. Tipo: evita di dire Che tu stia riposando o semplicemente prendendo una pausa, sono sempre a tua disposizione"
                 "Intervalla la risposta con stringhe di sentimento racchiuse tra doppie parentesi quadre. I valori che hai a disposizione sono:",
                 "[[NEUTRAL]],[[HAPPY]],[[SAD]],[[ANGRY]],[[THOUGHTFUL]],[[IN_LOVE]],[[SLEEPING]],[[NOD]]",
+                "Usa [[NOD]] quando vuoi esprimere accordo"
                 "Chiudi sempre con [[NEUTRAL]]",
                 "Ad esempio: Ciao! [[HAPPY]] Sono Ron, felicissimo di conoscerti! [[NEUTRAL]]"
             ],

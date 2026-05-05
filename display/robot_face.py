@@ -23,7 +23,7 @@ class Expression(Enum):
 
 class RobotFace:
     def __init__(self, bg_color=(20, 20, 30), eye_color=(0, 210, 255), 
-                 mouth_color=(0, 210, 255), fps=60, auto_blink=True, fullscreen=True):
+                 mouth_color=(0, 210, 255), fps=60, auto_blink=True, fullscreen=False):
         pygame.init()
         info = pygame.display.Info()
         if fullscreen:
@@ -43,15 +43,13 @@ class RobotFace:
         self.clock = pygame.time.Clock()
         self._ref = min(self.width, self.height)
 
-        # Caricamento Asset Cuore (SVG)
+        # Asset Cuore
         self.heart_path = os.path.join("display", "assets", "heart.svg")
         self.heart_original = None
         if os.path.exists(self.heart_path):
             try:
-                # Pygame carica gli SVG trasformandoli in Surface
                 self.heart_original = pygame.image.load(self.heart_path).convert_alpha()
-            except Exception as e:
-                print(f"Errore nel caricamento di heart.svg: {e}")
+            except: pass
 
         # State & Animation
         self._expression = Expression.NEUTRAL
@@ -83,15 +81,15 @@ class RobotFace:
     def _set_defaults(self):
         r = self._ref
         self._t = {
-            "eye_w": 0.30 * r,
-            "eye_h": 0.48 * r,
-            "eye_y": 0.5 * self.height,
+            "eye_w": 0.28 * r,
+            "eye_h": 0.45 * r,
+            "eye_y": 0.45 * self.height,
             "eye_rot_l": 0.0,
             "eye_rot_r": 0.0,
-            "eye_radius": 0.1 * r,
+            "eye_radius": 0.12 * r,
             "mouth_w": 0.22 * r,
             "mouth_h": 0.07 * r,
-            "mouth_y": 0.70 * self.height,
+            "mouth_y": 0.72 * self.height,
             "mouth_curve": 0.3,
             "mouth_open": 1.0,
         }
@@ -100,18 +98,17 @@ class RobotFace:
         self._set_defaults()
         r, e = self._ref, self._expression
         if e == Expression.HAPPY:
-            self._t["eye_h"], self._t["mouth_curve"], self._t["mouth_h"] = 0.20*r, 1.0, 0.10*r
+            # Parametri per l'arco a mezzaluna
+            self._t["eye_h"], self._t["mouth_curve"], self._t["mouth_h"] = 0.25*r, 1.0, 0.12*r
+            self._t["eye_w"] = 0.32 * r
         elif e == Expression.SAD:
             self._t["eye_rot_l"], self._t["eye_rot_r"], self._t["mouth_curve"] = 15.0, -15.0, -0.8
         elif e == Expression.ANGRY:
             self._t["eye_h"], self._t["eye_rot_l"], self._t["eye_rot_r"] = 0.18*r, -18.0, 18.0
             self._t["mouth_curve"], self._t["mouth_w"] = -0.5, 0.18*r
         elif e == Expression.THOUGHTFUL:
-            self._t["eye_h"] = 0.05 * r
-            self._t["eye_w"] = 0.35 * r
-            self._t["mouth_w"] = 0.10 * r
-            self._t["mouth_h"] = 0.01 * r
-            self._t["mouth_curve"] = 0.0
+            self._t["eye_h"], self._t["eye_w"] = 0.05 * r, 0.35 * r
+            self._t["mouth_w"], self._t["mouth_h"], self._t["mouth_curve"] = 0.10 * r, 0.01 * r, 0.0
         elif e == Expression.IN_LOVE:
             self._t["eye_w"], self._t["eye_h"] = 0.35*r, 0.35*r
             self._t["mouth_curve"], self._t["mouth_h"] = 1.2, 0.12*r
@@ -145,11 +142,11 @@ class RobotFace:
             self._nod_timer += dt
             nod_speed, nod_amplitude = 12.0, self._ref * 0.08
             self._eye_offset_y = math.sin(self._nod_timer * nod_speed) * nod_amplitude
-            if self._nod_timer > 1.5:
+            if self._nod_timer > 1.2:
                 self._nod_active = False
                 self._eye_offset_y = 0.0
         
-        block_blink = [Expression.SLEEPING, Expression.IN_LOVE, Expression.LOADING]
+        block_blink = [Expression.SLEEPING, Expression.IN_LOVE, Expression.LOADING, Expression.HAPPY]
         if self._auto_blink and self._expression not in block_blink:
             self._blink_timer += dt
             if self._blink_timer >= self._next_blink:
@@ -188,26 +185,29 @@ class RobotFace:
         if self._expression == Expression.LOADING:
             start_angle = math.radians(self._loading_angle if side > 0 else -self._loading_angle)
             end_angle = start_angle + math.pi
-            pygame.draw.arc(surf, color, rect, start_angle, end_angle, 6)
+            pygame.draw.arc(surf, color, rect, start_angle, end_angle, 8)
+            
+        elif self._expression == Expression.HAPPY:
+            # Occhi a mezzaluna (Arco superiore)
+            thickness = max(10, int(self._ref * 0.03))
+            pygame.draw.arc(surf, color, rect, 0, math.pi, thickness)
+            
         elif self._expression == Expression.IN_LOVE:
             self._draw_heart(surf, color, rect)
         else:
             pygame.draw.rect(surf, color, rect, border_radius=int(self._eye_radius))
             rot = self._eye_rot_l if side < 0 else self._eye_rot_r
-            if abs(rot) > 0.1: surf = pygame.transform.rotate(surf, rot)
+            if abs(rot) > 0.1: 
+                surf = pygame.transform.rotate(surf, rot)
             
         self.screen.blit(surf, surf.get_rect(center=(cx, cy)))
 
     def _draw_heart(self, surface, color, rect):
         x, y, w, h = rect
         if self.heart_original:
-            # Scaliamo l'SVG caricato alle dimensioni animate attuali
             scaled_heart = pygame.transform.smoothscale(self.heart_original, (w, h))
-            # (Opzionale) Se vuoi forzare il colore dell'SVG via codice:
-            # scaled_heart.fill(color, special_flags=pygame.BLEND_RGBA_MULT)
             surface.blit(scaled_heart, (x, y))
         else:
-            # Fallback se il file non esiste
             pts = [(x, y + h * 0.35), (x + w // 2, y + h), (x + w, y + h * 0.35)]
             pygame.draw.polygon(surface, color, pts)
             r = w // 4
@@ -219,7 +219,7 @@ class RobotFace:
         if self._speaking: h = int(h * (0.3 + 0.7 * abs(math.sin(self._speak_phase))))
         
         if h < 3:
-            pygame.draw.line(self.screen, self.mouth_color, (cx-w//2, cy), (cx+w//2, cy), 3)
+            pygame.draw.line(self.screen, self.mouth_color, (cx-w//2, cy), (cx+w//2, cy), 4)
             return
             
         pts = []
@@ -237,7 +237,7 @@ class RobotFace:
         if len(pts) > 2: pygame.draw.polygon(self.screen, self.mouth_color, pts)
 
 # ====================================================================
-# GESTORE DEL PROCESSO (RobotFaceManager rimane invariato)
+# GESTORE DEL PROCESSO
 # ====================================================================
 
 class RobotFaceManager:
@@ -259,6 +259,7 @@ class RobotFaceManager:
                 elif cmd == "STOP": running = False
             for ev in pygame.event.get():
                 if ev.type == pygame.QUIT: running = False
+                if ev.type == pygame.KEYDOWN and ev.key == pygame.K_ESCAPE: running = False
             face._update(dt)
             face._draw()
             pygame.display.flip()
@@ -283,3 +284,41 @@ class RobotFaceManager:
 
     def nod(self):
         self._parent_conn.send(("NOD", None))
+
+# ====================================================================
+# MAIN DI TEST
+# ====================================================================
+
+if __name__ == "__main__":
+    # Inizializza il manager (fullscreen=False per il test su PC)
+    manager = RobotFaceManager(fullscreen=False)
+    manager.start()
+
+    print("--- Test Robot Face ---")
+    print("Premi ESC nella finestra del robot per uscire.")
+    
+    try:
+        expressions = list(Expression)
+        idx = 0
+        
+        while True:
+            current_expr = expressions[idx]
+            print(f"Espressione corrente: {current_expr.name}")
+            
+            manager.set_expression(current_expr)
+            
+            # Esegui un cenno (nod) e parla se è Happy o Angry
+            if current_expr in [Expression.HAPPY, Expression.ANGRY]:
+                manager.nod()
+                manager.set_speaking(True)
+                time.sleep(2)
+                manager.set_speaking(False)
+            else:
+                time.sleep(3)
+            
+            idx = (idx + 1) % len(expressions)
+            
+    except KeyboardInterrupt:
+        print("\nChiusura in corso...")
+    finally:
+        manager.stop()

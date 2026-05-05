@@ -39,6 +39,9 @@ def on_expression(expression: str) -> None:
             # Mappa i nomi delle espressioni a quelle della classe RobotFaceManager
             # Se hai bisogno di espressioni custom, devi aggiungerle nel file 
             # display/robot_face.py e nel config.py
+            if expression.upper()=="NOD":
+                robot_face.nod()
+                return
             expr_map = {
                 "NEUTRAL": Expression.NEUTRAL,
                 "THOUGHTFUL": Expression.THOUGHTFUL,
