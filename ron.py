@@ -71,9 +71,9 @@ def on_stop_speaking() -> None:
 
 def loading_handler(data: dict) -> None:
     if data["started"] and robot_face:
-        robot_face.start_loading()
+        robot_face.set_expression(Expression.LOADING)
     elif robot_face:
-        robot_face.stop_loading()
+        robot_face.set_expression(Expression.NEUTRAL)
     
     if data["message"]:
         tts.speak(data["message"])
