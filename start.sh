@@ -1,5 +1,8 @@
 #!/bin/bash
 
+if [ "$1" = "--rotate" ]; then
+    wlr-randr --output HDMI-A-1 --transform 90
+fi
 # Vai nella directory dello script
 cd "$(dirname "$0")"
 
