@@ -6,14 +6,14 @@ import random
 import threading
 import time
 import difflib
-from config import logger
+from config import logger, MUSIC_CACHE_DIR
 from langchain_core.tools import tool
 
 class MusicTool:
     def __init__(self):
         if not pygame.mixer.get_init():
             pygame.mixer.init()
-        self.download_path = config.MUSIC_CACHE_DIR
+        self.download_path = MUSIC_CACHE_DIR
         if not os.path.exists(self.download_path):
             os.makedirs(self.download_path)
             
