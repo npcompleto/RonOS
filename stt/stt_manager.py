@@ -192,7 +192,7 @@ class SpeechToTextManager:
         speech_buffer: list[np.ndarray] = []
         last_voice_time: float = 0.0
         accumulator = np.array([], dtype=np.float32)
-
+        stop_listening_logged = False
         while self._running.is_set():
             try:
                 chunk_raw = self._raw_queue.get(timeout=0.5)
@@ -203,8 +203,12 @@ class SpeechToTextManager:
             if len(chunk_16k) == 0: continue
 
             if not pygame.mixer.get_init() or pygame.mixer.music.get_busy():
-                logger.debug("Audio is playing, skipping STT")
+                if not stop_listening_logged: logger.info("Audio is playing, skipping STT")
+                stop_listening_logged = True
                 continue
+            else:
+                stop_listening_logged = False
+                logger.debug("Sono in ascolto!")
 
             if not self._is_awake:
                 pcm16 = (np.clip(chunk_16k, -1.0, 1.0) * 32767).astype(np.int16)
