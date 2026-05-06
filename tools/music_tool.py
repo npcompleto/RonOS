@@ -86,7 +86,7 @@ class MusicTool:
             index = int(query) - 1
             if 0 <= index < len(songs): target_file = songs[index]
         except ValueError:
-            matches = difflib.get_close_matches(query, songs, n=1, cutoff=0.3)
+            matches = difflib.get_close_matches(query_lower, [s.lower() for s in songs], n=1, cutoff=0.5)
             if matches: target_file = matches[0]
 
         if target_file:
