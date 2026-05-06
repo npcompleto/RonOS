@@ -208,6 +208,8 @@ class SpeechToTextManager:
                 continue
             else:
                 stop_listening_logged = False
+                em = EventManager()
+                em.publish("music", {"message": None, "started": False})
                 logger.debug("Sono in ascolto!")
 
             if not self._is_awake:
