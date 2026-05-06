@@ -68,18 +68,29 @@ def on_start_speaking() -> None:
 def on_stop_speaking() -> None:
     if robot_face:
         robot_face.set_speaking(False)
-        
+
+def loading_handler(data: dict) -> None:
+    if data["started"] and robot_face:
+        robot_face.start_loading()
+    elif robot_face:
+        robot_face.stop_loading()
+    
+    if data["message"]:
+        tts.speak(data["message"])
+    
 
 # Definiamo la funzione di callback per elaborare il messaggio
 def process_message(user_message: str) -> str:
     logger.info(f"Messaggio ricevuto: {user_message}")
     response = assistant.agent.run(user_message)
     return response.content
+    
 
 if __name__ == "__main__":
    
     logger.info("Ron OS starting...")
     em = EventManager()
+    em.subscribe("loading", lambda data: print(data["message"]))   
     if "--no-face" not in sys.argv:
         robot_face = RobotFaceManager(fullscreen="--windowed" not in sys.argv, bg_color=(10, 10, 20))
         robot_face.start()

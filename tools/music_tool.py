@@ -8,6 +8,9 @@ import time
 import difflib
 from config import logger, MUSIC_CACHE_DIR
 from langchain_core.tools import tool
+from event_manager import EventManager
+
+
 
 class MusicTool:
     def __init__(self):
@@ -99,6 +102,8 @@ class MusicTool:
     def play_download(self, query):
         """Scarica da YouTube e riproduce (interrompe playlist se attiva)."""
         logger.debug(f"Scaricamento di '{query}'...")
+        em = EventManager()
+        em.publish("loading", {"message": f"Sto scaricando {query}", "started": True})
         self.stop()
         try:
             ydl_opts = {
@@ -118,11 +123,12 @@ class MusicTool:
                 video_info = info['entries'][0]
                 logger.debug(f"Video info: {video_info}")
                 filename = ydl.prepare_filename(video_info).rsplit('.', 1)[0] + ".mp3"
-                
+                em.publish("loading", {"message": None, "started": False})
                 pygame.mixer.music.load(filename)
                 pygame.mixer.music.play()
                 return f"Scaricato e in riproduzione: {video_info['title']}"
         except Exception as e:
+            em.publish("loading", {"message": f"Errore download: {str(e)}", "started": False})
             return f"Errore download: {str(e)}"
 
     def play_any(self, query):
