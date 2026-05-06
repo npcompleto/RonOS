@@ -17,6 +17,8 @@ from scipy.signal import lfilter, firwin
 from stt.models.whispher import Transcriber
 from vosk import Model, KaldiRecognizer
 
+from event_manager import EventManager
+
 logger = logging.getLogger(__name__)
 
 #FIXME bruttino
