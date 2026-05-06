@@ -1,8 +1,9 @@
 from agents.base_agent import BaseAgent
 from tools.music_tool import play_music, stop_music, play_cached_music
+from typing import Optional, Callable
 
 class MusicAgent(BaseAgent):
-    def __init__(self):
+    def __init__(self, music_end_callback: Optional[Callable[[str], None]] = None):
         super().__init__(
             name="Music Agent",
             role="Il tuo compito è cercare brani e gestire la riproduzione di musica.",
@@ -13,3 +14,4 @@ class MusicAgent(BaseAgent):
             ],
             tools=[play_music, stop_music, play_cached_music]
         )
+        self._music_end_callback = music_end_callback

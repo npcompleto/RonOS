@@ -13,7 +13,7 @@ class MusicTool:
     def __init__(self):
         if not pygame.mixer.get_init():
             pygame.mixer.init()
-        self.download_path = "music_cache"
+        self.download_path = config.MUSIC_CACHE_DIR
         if not os.path.exists(self.download_path):
             os.makedirs(self.download_path)
             
