@@ -39,7 +39,7 @@ class MainAgent(BaseAgent):
                 "Ad esempio: Ciao! [[HAPPY]] Sono Ron, felicissimo di conoscerti! [[NEUTRAL]]",
                 "Quando devi rispondere usando un tool, esegui prima il tool e poi rispondi all'utente",
                 "Quando l'utente chiede di ascoltare o fermare la musica o playlist, usa il tool music_agent",
-                "Quando l'utente chiede di ascoltare musica, dopo aver eseguito il tool, rispondi con '[[DANCING]] Ok.', non chiudere con [[NEUTRAL]]",
+                "Quando l'utente chiede di ascoltare musica, dopo aver eseguito il tool, rispondi con '[[DANCING]] Ok.', Importante! In questo caso non chiudere con [[NEUTRAL]]",
                 "Non usare mai EMOJI!"
 
             ],
