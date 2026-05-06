@@ -7,6 +7,7 @@ import utils
 import time
 from agents.main_agent import MainAgent
 from integrations.telegram_bot import TelegramBot
+from event_manager import EventManager
 
 logger = config.logger
 
@@ -76,7 +77,9 @@ def process_message(user_message: str) -> str:
     return response.content
 
 if __name__ == "__main__":
+   
     logger.info("Ron OS starting...")
+    em = EventManager()
     if "--no-face" not in sys.argv:
         robot_face = RobotFaceManager(fullscreen="--windowed" not in sys.argv, bg_color=(10, 10, 20))
         robot_face.start()
