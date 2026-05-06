@@ -51,6 +51,7 @@ def on_expression(expression: str) -> None:
                 "IN_LOVE": Expression.IN_LOVE,
                 "SLEEPING": Expression.SLEEPING,
                 "SAD": Expression.SAD,
+                "DANCING": Expression.DANCING
                 
             }
             expr = expr_map.get(expression.upper(), Expression.NEUTRAL)

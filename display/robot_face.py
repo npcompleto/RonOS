@@ -20,6 +20,7 @@ class Expression(Enum):
     IN_LOVE = "in_love"
     SLEEPING = "sleeping"
     LOADING = "loading"
+    DANCING = "dancing"  # Nuova espressione
 
 class RobotFace:
     def __init__(self, bg_color=(20, 20, 30), eye_color=(0, 210, 255), 
@@ -64,8 +65,13 @@ class RobotFace:
         # Animazioni Speciali
         self._nod_timer = 0.0
         self._nod_active = False
+        self._eye_offset_x = 0.0 # Nuovo offset per ballo
         self._eye_offset_y = 0.0
         self._loading_angle = 0.0 
+        
+        # Parametri Ballo
+        self.dance_rhythm = 6.0   # Velocità del ritmo
+        self._dance_timer = 0.0
 
         # Parametri correnti e target
         self._eye_w = self._eye_h = self._eye_rot_l = self._eye_rot_r = 0.0
@@ -98,7 +104,6 @@ class RobotFace:
         self._set_defaults()
         r, e = self._ref, self._expression
         if e == Expression.HAPPY:
-            # Parametri per l'arco a mezzaluna
             self._t["eye_h"], self._t["mouth_curve"], self._t["mouth_h"] = 0.25*r, 1.0, 0.12*r
             self._t["eye_w"] = 0.32 * r
         elif e == Expression.SAD:
@@ -117,6 +122,9 @@ class RobotFace:
             self._t["mouth_w"], self._t["mouth_h"], self._t["mouth_curve"] = 0.1*r, 0.01*r, 0.0
         elif e == Expression.SLEEPING:
             self._t["eye_h"], self._t["mouth_h"], self._t["mouth_open"] = 0.018*r, 0.012*r, 0.3
+        elif e == Expression.DANCING:
+            self._t["eye_w"], self._t["eye_h"] = 0.28*r, 0.38*r
+            self._t["mouth_curve"], self._t["mouth_w"] = 0.6, 0.26*r
 
     def _sync_instantly(self):
         for k, v in self._t.items(): setattr(self, f"_{k}", v)
@@ -138,13 +146,27 @@ class RobotFace:
         if self._expression == Expression.LOADING:
             self._loading_angle += dt * 360
         
+        # Gestione Movimento Occhi (Ballo + Nod)
+        target_off_x = 0.0
+        target_off_y = 0.0
+
+        if self._expression == Expression.DANCING:
+            self._dance_timer += dt
+            # Movimento a "otto"
+            target_off_x = math.sin(self._dance_timer * self.dance_rhythm) * (self._ref * 0.15)
+            target_off_y = math.cos(self._dance_timer * self.dance_rhythm * 2) * (self._ref * 0.08)
+        else:
+            self._dance_timer = 0.0
+
         if self._nod_active:
             self._nod_timer += dt
             nod_speed, nod_amplitude = 12.0, self._ref * 0.08
-            self._eye_offset_y = math.sin(self._nod_timer * nod_speed) * nod_amplitude
+            target_off_y += math.sin(self._nod_timer * nod_speed) * nod_amplitude
             if self._nod_timer > 1.2:
                 self._nod_active = False
-                self._eye_offset_y = 0.0
+
+        self._eye_offset_x = target_off_x
+        self._eye_offset_y = target_off_y
         
         block_blink = [Expression.SLEEPING, Expression.IN_LOVE, Expression.LOADING, Expression.HAPPY]
         if self._auto_blink and self._expression not in block_blink:
@@ -161,10 +183,14 @@ class RobotFace:
 
     def _draw(self):
         self.screen.fill(self.bg_color)
-        cx = self.width // 2
+        # Applica offset X e Y agli occhi
+        cx = (self.width // 2) + int(self._eye_offset_x)
         cy = int(self._eye_y + self._eye_offset_y)
+        
         for side in [-1, 1]:
             self._draw_eye(cx + side * int(self._eye_spacing), cy, side)
+        
+        # La bocca segue parzialmente il movimento verticale
         self._draw_mouth(int(self._mouth_y + self._eye_offset_y * 0.5))
 
     def _draw_eye(self, cx, cy, side):
@@ -188,7 +214,6 @@ class RobotFace:
             pygame.draw.arc(surf, color, rect, start_angle, end_angle, 8)
             
         elif self._expression == Expression.HAPPY:
-            # Occhi a mezzaluna (Arco superiore)
             thickness = max(10, int(self._ref * 0.03))
             pygame.draw.arc(surf, color, rect, 0, math.pi, thickness)
             
@@ -290,12 +315,10 @@ class RobotFaceManager:
 # ====================================================================
 
 if __name__ == "__main__":
-    # Inizializza il manager (fullscreen=False per il test su PC)
     manager = RobotFaceManager(fullscreen=False)
     manager.start()
 
     print("--- Test Robot Face ---")
-    print("Premi ESC nella finestra del robot per uscire.")
     
     try:
         expressions = list(Expression)
@@ -304,21 +327,24 @@ if __name__ == "__main__":
         while True:
             current_expr = expressions[idx]
             print(f"Espressione corrente: {current_expr.name}")
-            
             manager.set_expression(current_expr)
             
-            # Esegui un cenno (nod) e parla se è Happy o Angry
-            if current_expr in [Expression.HAPPY, Expression.ANGRY]:
+            # Se sta ballando, facciamolo parlare un po'
+            if current_expr == Expression.DANCING:
+                manager.set_speaking(True)
+                time.sleep(4)
+                manager.set_speaking(False)
+            elif current_expr in [Expression.HAPPY, Expression.ANGRY]:
                 manager.nod()
                 manager.set_speaking(True)
                 time.sleep(2)
                 manager.set_speaking(False)
             else:
-                time.sleep(3)
+                time.sleep(2)
             
             idx = (idx + 1) % len(expressions)
             
     except KeyboardInterrupt:
-        print("\nChiusura in corso...")
+        print("\nChiusura...")
     finally:
         manager.stop()
