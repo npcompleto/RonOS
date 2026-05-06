@@ -85,17 +85,25 @@ class RobotFace:
         self._sync_instantly()
 
     def _set_defaults(self):
-        r = self._ref
+        # Riferimento basato sulla dimensione minore per scalare gli elementi
+        r = min(self.width, self.height)
+        self._ref = r
+        
+        # Determiniamo se lo schermo è "verticale" o "orizzontale"
+        is_portrait = self.height > self.width
+
+        # Proporzioni adattive
         self._t = {
-            "eye_w": 0.28 * r,
-            "eye_h": 0.45 * r,
-            "eye_y": 0.45 * self.height,
+            "eye_w": 0.28 * r if not is_portrait else 0.35 * r,
+            "eye_h": 0.40 * r if not is_portrait else 0.30 * r,
+            "eye_y": 0.42 * self.height, # Posiziona gli occhi al 42% dell'altezza
             "eye_rot_l": 0.0,
             "eye_rot_r": 0.0,
             "eye_radius": 0.12 * r,
-            "mouth_w": 0.22 * r,
-            "mouth_h": 0.07 * r,
-            "mouth_y": 0.72 * self.height,
+            "eye_spacing": 0.22 * self.width, # Spazio tra gli occhi basato sulla LARGHEZZA
+            "mouth_w": 0.25 * r if not is_portrait else 0.40 * r,
+            "mouth_h": 0.06 * r,
+            "mouth_y": 0.75 * self.height, # Posiziona la bocca al 75% dell'altezza
             "mouth_curve": 0.3,
             "mouth_open": 1.0,
         }
