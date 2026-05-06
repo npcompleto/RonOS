@@ -77,7 +77,12 @@ def loading_handler(data: dict) -> None:
     
     if data["message"]:
         tts.speak(data["message"])
-    
+
+def music_handler(data: dict) -> None:
+    if data["started"] and robot_face:
+        robot_face.set_expression(Expression.DANCING)
+    elif robot_face:
+        robot_face.set_expression(Expression.NEUTRAL)
 
 # Definiamo la funzione di callback per elaborare il messaggio
 def process_message(user_message: str) -> str:
@@ -90,7 +95,8 @@ if __name__ == "__main__":
    
     logger.info("Ron OS starting...")
     em = EventManager()
-    em.subscribe("loading", lambda data: print(data["message"]))   
+    em.subscribe("loading", loading_handler)
+    em.subscribe("music", music_handler)
     if "--no-face" not in sys.argv:
         robot_face = RobotFaceManager(fullscreen="--windowed" not in sys.argv, bg_color=(10, 10, 20))
         robot_face.start()

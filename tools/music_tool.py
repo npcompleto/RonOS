@@ -44,6 +44,8 @@ class MusicTool:
                 else:
                     break # Playlist finita
             time.sleep(1)
+        em = EventManager()
+        em.publish("music", {"message": None, "started": False})
         logger.info("[MusicTool] Thread playlist terminato.")
 
     def _play_current_file(self):
@@ -125,6 +127,7 @@ class MusicTool:
                 filename = ydl.prepare_filename(video_info).rsplit('.', 1)[0] + ".mp3"
                 em.publish("loading", {"message": None, "started": False})
                 pygame.mixer.music.load(filename)
+                em.publish("music", {"message": None, "started": True})
                 pygame.mixer.music.play()
                 return f"Scaricato e in riproduzione: {video_info['title']}"
         except Exception as e:
@@ -144,6 +147,8 @@ class MusicTool:
     def stop(self):
         """Ferma musica e interrompe il thread della playlist."""
         self._stop_event = True # Segnala al thread di uscire
+        em = EventManager()
+        em.publish("music", {"message": None, "started": False})
         pygame.mixer.music.stop()
         pygame.mixer.music.unload()
         
