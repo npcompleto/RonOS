@@ -217,14 +217,17 @@ class SpeechToTextManager:
             if len(chunk_16k) == 0: continue
 
             if not pygame.mixer.get_init() or pygame.mixer.music.get_busy():
-                if not stop_listening_logged: logger.info("Audio is playing, skipping STT")
+                if not stop_listening_logged: 
+                    logger.info("Audio is playing, skipping STT")
                 stop_listening_logged = True
                 continue
             else:
-                stop_listening_logged = False
-                em = EventManager()
-                em.publish("music", {"message": None, "started": False})
-                logger.debug("Sono in ascolto!")
+                if stop_listening_logged:
+                    time.sleep(0.5) # Attesa di 500ms (regola questo valore tra 0.3 e 0.8)
+                    stop_listening_logged = False
+                    em = EventManager()
+                    em.publish("music", {"message": None, "started": False})
+                    logger.debug("Sono in ascolto!")
 
             if not self._is_awake:
 
