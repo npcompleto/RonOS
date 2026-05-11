@@ -63,10 +63,12 @@ def on_expression(expression: str) -> None:
         logger.error(f"Errore durante il cambio espressione: {e}")
     
 def on_start_speaking() -> None:
+    logger.info("Ron is speaking....")
     if robot_face:
         robot_face.set_speaking(True)
 
 def on_stop_speaking() -> None:
+    logger.info("Ron stopped speaking....")
     if robot_face:
         robot_face.set_speaking(False)
 

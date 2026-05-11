@@ -272,7 +272,7 @@ class SpeechToTextManager:
                         pcm16_oww = (np.clip(oww_frame, -1.0, 1.0) * 32767).astype(np.int16)
 
                         prediction = self._wakeword_model.predict(pcm16_oww)
-                        threshold = 0.8
+                        threshold = 0.5
 
                         for wakeword_name, score in prediction.items():
                             if score > threshold:

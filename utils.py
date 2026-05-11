@@ -61,6 +61,9 @@ def play_audio(filepath, volume=0.8):
         while pygame.mixer.music.get_busy():
             pygame.time.Clock().tick(10) # Riduce il carico sulla CPU nel loop
             
+        # Attesa aggiuntiva per assicurare il rilascio completo del device
+        time.sleep(0.3)
+            
         return True
 
     except Exception as e:
