@@ -218,95 +218,65 @@ class SpeechToTextManager:
 
             # --- LOGICA DI FILTRO AUDIO IN USCITA ---
             if not pygame.mixer.get_init() or pygame.mixer.music.get_busy():
-                if not stop_listening_logged: 
-                    logger.info("Audio is playing, skipping STT")
                 stop_listening_logged = True
-                
-                # Svuota costantemente la coda mentre l'audio suona 
-                # per non accumulare "spazzatura" sonora
-                self._flush_queue(self._raw_queue) 
+                self._flush_queue(self._raw_queue) # Svuota mentre suona
                 continue
             else:
                 if stop_listening_logged:
-                    # 1. Attesa fisica per eco ambientale
-                    time.sleep(0.6) 
-                    
-                    # 2. SVUOTA NUOVAMENTE dopo lo sleep per eliminare 
-                    # l'audio catturato durante l'attesa stessa
+                    # Aspettiamo il silenzio ambientale
+                    time.sleep(0.7) 
+                    # Svuotiamo TUTTO quello che è stato accumulato durante lo sleep
                     self._flush_queue(self._raw_queue)
-                    
-                    # 3. Resetta gli accumulatori per evitare glitch
                     accumulator = np.array([], dtype=np.float32)
                     oww_accumulator = np.array([], dtype=np.float32)
+                    speech_buffer = [] 
                     
                     stop_listening_logged = False
-                    em = EventManager()
-                    em.publish("music", {"message": None, "started": False})
-                    logger.debug("Coda pulita. Ora sono in ascolto davvero!")
+                    logger.debug("✨ Buffer resettati. Pronto per l'ascolto pulito.")
 
             if not self._is_awake:
 
-                if self._wakeword_handler == "vosk":
-                    pcm16 = (np.clip(chunk_16k, -1.0, 1.0) * 32767).astype(np.int16)
+                # --- Caso VOSK ---
+                if self._wakeword_recognizer.AcceptWaveform(pcm16.tobytes()):
+                    result = json.loads(self._wakeword_recognizer.Result())
+                    text = result.get("text", "").lower().strip()
 
-                    if self._wakeword_recognizer.AcceptWaveform(pcm16.tobytes()):
-                        result = json.loads(self._wakeword_recognizer.Result())
-                        text = result.get("text", "").lower().strip()
+                    if any(word in text for word in getattr(self._config, "VOSK_WAKE_WORDS", [])):
+                        logger.info(f"✨ Wake Word Vosk rilevata: {text}")
+                        
+                        # --- PULIZIA TOTALE ---
+                        self._is_awake = True
+                        self._flush_queue(self._raw_queue) # Svuota i pacchetti microfonici pendenti
+                        accumulator = np.array([], dtype=np.float32) # Svuota il buffer VAD
+                        oww_accumulator = np.array([], dtype=np.float32) # Svuota il buffer OWW
+                        speech_buffer = [] # Assicurati che il buffer di Whisper sia vuoto
+                        
+                        if self._on_wake:
+                            self._on_wake(text)
+                        continue
 
-                        if any(word in text for word in getattr(self._config, "VOSK_WAKE_WORDS", [])):
-                            logger.info(f"✨ Wake Word Vosk rilevata: {text}")
+                # --- Caso OpenWakeWord ---
+                # (Stessa logica dentro il ciclo if score > threshold)
+                if score > threshold:
+                    logger.info(f"✨ Wake Word OpenWakeWord rilevata: {wakeword_name}")
 
-                            if self._save_audio:
-                                self._save_wav(chunk_16k, "wake_trigger_vosk")
+                    # --- PULIZIA TOTALE ---
+                    self._is_awake = True
+                    self._flush_queue(self._raw_queue) 
+                    accumulator = np.array([], dtype=np.float32)
+                    oww_accumulator = np.array([], dtype=np.float32)
+                    speech_buffer = [] # Fondamentale per non inviare pezzi della wakeword a Whisper
+                    
+                    if self._on_wake:
+                        self._on_wake(wakeword_name)
+                    break
 
-                            self._is_awake = True
+                if self._is_awake:
+                    break
 
-                            if self._on_wake:
-                                self._on_wake(text)
+                continue
 
-                    continue
-
-                elif self._wakeword_handler == "openwakeword":
-                    # accumuliamo il chunk già resamplato a 16k
-                    oww_accumulator = np.concatenate([oww_accumulator, chunk_16k])
-
-                    # openWakeWord vuole frame da 1280 campioni
-                    while len(oww_accumulator) >= 1280:
-                        oww_frame = oww_accumulator[:1280]
-                        oww_accumulator = oww_accumulator[1280:]
-
-                        pcm16_oww = (np.clip(oww_frame, -1.0, 1.0) * 32767).astype(np.int16)
-
-                        prediction = self._wakeword_model.predict(pcm16_oww)
-
-                        threshold = 0.5
-
-                        if self._save_audio:
-                            self._save_wav(oww_frame, "wake_trigger_openword")
-
-                        for wakeword_name, score in prediction.items():
-                            logger.debug(f"Wake word: {wakeword_name}, score={score}")
-
-                            if score > threshold:
-                                logger.info(
-                                    f"✨ Wake Word OpenWakeWord rilevata: "
-                                    f"{wakeword_name} (score={score})"
-                                )
-
-                                self._is_awake = True
-                                oww_accumulator = np.array([], dtype=np.float32)
-
-                                if self._on_wake:
-                                    self._on_wake(wakeword_name)
-
-                                break
-
-                        if self._is_awake:
-                            break
-
-                    continue
-
-                else:
+            else:
                     logger.warning(
                         f"Wakeword handler sconosciuto: {self._wakeword_handler}"
                     )
