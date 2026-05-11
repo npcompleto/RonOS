@@ -54,7 +54,26 @@ def find_input_device(requested_index):
         except Exception as e:
             logging.error(f"Errore query su indice {requested_index}: {e}")
 
-    # 2. Prova a cercare per nome in modo più aggressivo
+    # 2. Prova a cercare per nome esplicito
+    AUDIO_DEVICE_NAME_CONTAINS = os.getenv("AUDIO_DEVICE_NAME_CONTAINS")
+    if AUDIO_DEVICE_NAME_CONTAINS:
+        wanted = AUDIO_DEVICE_NAME_CONTAINS.lower().strip()
+
+        for i, d in enumerate(devices):
+            if d['max_input_channels'] > 0:
+                if wanted in d['name'].lower():
+                    logger.info(
+                        f"Dispositivo richiesto trovato per nome: "
+                        f"{d['name']} all'indice {i}"
+                    )
+                    return i, int(d['default_samplerate']), d['name']
+
+        logger.warning(
+            f"Nessun dispositivo contiene il nome richiesto: "
+            f"{AUDIO_DEVICE_NAME_CONTAINS}"
+        )
+
+    # 3. Prova a cercare per nome in modo più aggressivo
     for i, d in enumerate(devices):
         if d['max_input_channels'] > 0:
             lower_name = d['name'].lower()
@@ -62,12 +81,12 @@ def find_input_device(requested_index):
                 logger.info(f"Dispositivo compatibile trovato per nome: {d['name']} all'indice {i}")
                 return i, int(d['default_samplerate']), d['name']
 
-    # 3. Prova il default di sistema
+    # 4. Prova il default di sistema
     try:
         info = sd.query_devices(None, 'input')
         return None, int(info['default_samplerate']), info['name']
     except Exception:
-        # 4. Ultimo tentativo: il primo con input > 0
+        # 5. Ultimo tentativo: il primo con input > 0
         for i, d in enumerate(devices):
             if d['max_input_channels'] > 0:
                 return i, int(d['default_samplerate']), d['name']
@@ -80,7 +99,11 @@ logger.info(f"Audio device FINAL: [{AUDIO_DEVICE_INDEX}] {AUDIO_DEVICE_NAME} at 
 VAD_THRESHOLD = os.getenv("VAD_THRESHOLD") or 0.005  # Soglia di rilevamento voce (0.001-0.01)
 SILENCE_DURATION_SECONDS = os.getenv("SILENCE_DURATION_SECONDS") or 0.6  # Silenzio dopo il parlato per interrompere la trascrizione
 
-WAKE_WORDS = ["ciao"]
+VOSK_WAKE_WORDS = ["ciao"]
+
+#WAKEWORD_HANDLER = "vosk"
+# oppure
+WAKEWORD_HANDLER = "openwakeword"
 
 SOUNDS = { "wake" : "sounds/bubblepop_in.mp3", "ack" : "sounds/bubblepop_out.mp3", "startup": "sounds/startup.mp3"} 
 
