@@ -216,18 +216,33 @@ class SpeechToTextManager:
             chunk_16k = self._resample_chunk(chunk_raw)
             if len(chunk_16k) == 0: continue
 
+            # --- LOGICA DI FILTRO AUDIO IN USCITA ---
             if not pygame.mixer.get_init() or pygame.mixer.music.get_busy():
                 if not stop_listening_logged: 
                     logger.info("Audio is playing, skipping STT")
                 stop_listening_logged = True
+                
+                # Svuota costantemente la coda mentre l'audio suona 
+                # per non accumulare "spazzatura" sonora
+                self._flush_queue(self._raw_queue) 
                 continue
             else:
                 if stop_listening_logged:
-                    time.sleep(0.5) # Attesa di 500ms (regola questo valore tra 0.3 e 0.8)
+                    # 1. Attesa fisica per eco ambientale
+                    time.sleep(0.6) 
+                    
+                    # 2. SVUOTA NUOVAMENTE dopo lo sleep per eliminare 
+                    # l'audio catturato durante l'attesa stessa
+                    self._flush_queue(self._raw_queue)
+                    
+                    # 3. Resetta gli accumulatori per evitare glitch
+                    accumulator = np.array([], dtype=np.float32)
+                    oww_accumulator = np.array([], dtype=np.float32)
+                    
                     stop_listening_logged = False
                     em = EventManager()
                     em.publish("music", {"message": None, "started": False})
-                    logger.debug("Sono in ascolto!")
+                    logger.debug("Coda pulita. Ora sono in ascolto davvero!")
 
             if not self._is_awake:
 
