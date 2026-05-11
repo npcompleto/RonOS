@@ -207,6 +207,7 @@ class SpeechToTextManager:
         accumulator = np.array([], dtype=np.float32)
         oww_accumulator = np.array([], dtype=np.float32)
         stop_listening_logged = False
+        
         while self._running.is_set():
             try:
                 chunk_raw = self._raw_queue.get(timeout=0.5)
@@ -216,73 +217,78 @@ class SpeechToTextManager:
             chunk_16k = self._resample_chunk(chunk_raw)
             if len(chunk_16k) == 0: continue
 
-            # --- LOGICA DI FILTRO AUDIO IN USCITA ---
+            # --- FIX ECCEZIONE: Definiamo pcm16 subito dopo il resampling ---
+            # Questo garantisce che pcm16 esista per qualsiasi handler (Vosk, OWW, VAD)
+            pcm16 = (np.clip(chunk_16k, -1.0, 1.0) * 32767).astype(np.int16)
+
+            # --- LOGICA DI FILTRO AUDIO IN USCITA (Robot che parla) ---
             if not pygame.mixer.get_init() or pygame.mixer.music.get_busy():
+                if not stop_listening_logged: 
+                    logger.info("Audio is playing, skipping STT")
                 stop_listening_logged = True
-                self._flush_queue(self._raw_queue) # Svuota mentre suona
+                self._flush_queue(self._raw_queue) # Svuota costantemente per non accumulare eco
                 continue
             else:
                 if stop_listening_logged:
-                    # Aspettiamo il silenzio ambientale
-                    time.sleep(0.7) 
-                    # Svuotiamo TUTTO quello che è stato accumulato durante lo sleep
+                    time.sleep(0.7) # Silenzio post-parlato
                     self._flush_queue(self._raw_queue)
                     accumulator = np.array([], dtype=np.float32)
                     oww_accumulator = np.array([], dtype=np.float32)
-                    speech_buffer = [] 
-                    
+                    speech_buffer = [] # Reset fondamentale
                     stop_listening_logged = False
-                    logger.debug("✨ Buffer resettati. Pronto per l'ascolto pulito.")
+                    logger.debug("✨ Buffer resettati dopo parlato. Pronto.")
 
             if not self._is_awake:
+                # --- WAKEWORD HANDLER: VOSK ---
+                if self._wakeword_handler == "vosk":
+                    if self._wakeword_recognizer.AcceptWaveform(pcm16.tobytes()):
+                        result = json.loads(self._wakeword_recognizer.Result())
+                        text = result.get("text", "").lower().strip()
 
-                # --- Caso VOSK ---
-                if self._wakeword_recognizer.AcceptWaveform(pcm16.tobytes()):
-                    result = json.loads(self._wakeword_recognizer.Result())
-                    text = result.get("text", "").lower().strip()
+                        if any(word in text for word in getattr(self._config, "VOSK_WAKE_WORDS", [])):
+                            logger.info(f"✨ Wake Word Vosk rilevata: {text}")
+                            
+                            # --- PULIZIA ATOMICA POST-WAKE ---
+                            self._is_awake = True
+                            self._flush_queue(self._raw_queue)
+                            accumulator = np.array([], dtype=np.float32)
+                            oww_accumulator = np.array([], dtype=np.float32)
+                            speech_buffer = [] # Whisper partirà da zero assoluto
+                            
+                            if self._on_wake:
+                                self._on_wake(text)
+                            continue
 
-                    if any(word in text for word in getattr(self._config, "VOSK_WAKE_WORDS", [])):
-                        logger.info(f"✨ Wake Word Vosk rilevata: {text}")
-                        
-                        # --- PULIZIA TOTALE ---
-                        self._is_awake = True
-                        self._flush_queue(self._raw_queue) # Svuota i pacchetti microfonici pendenti
-                        accumulator = np.array([], dtype=np.float32) # Svuota il buffer VAD
-                        oww_accumulator = np.array([], dtype=np.float32) # Svuota il buffer OWW
-                        speech_buffer = [] # Assicurati che il buffer di Whisper sia vuoto
-                        
-                        if self._on_wake:
-                            self._on_wake(text)
-                        continue
+                # --- WAKEWORD HANDLER: OPENWAKEWORD ---
+                elif self._wakeword_handler == "openwakeword":
+                    oww_accumulator = np.concatenate([oww_accumulator, chunk_16k])
 
-                # --- Caso OpenWakeWord ---
-                # (Stessa logica dentro il ciclo if score > threshold)
-                if score > threshold:
-                    logger.info(f"✨ Wake Word OpenWakeWord rilevata: {wakeword_name}")
+                    while len(oww_accumulator) >= 1280:
+                        oww_frame = oww_accumulator[:1280]
+                        oww_accumulator = oww_accumulator[1280:]
+                        pcm16_oww = (np.clip(oww_frame, -1.0, 1.0) * 32767).astype(np.int16)
 
-                    # --- PULIZIA TOTALE ---
-                    self._is_awake = True
-                    self._flush_queue(self._raw_queue) 
-                    accumulator = np.array([], dtype=np.float32)
-                    oww_accumulator = np.array([], dtype=np.float32)
-                    speech_buffer = [] # Fondamentale per non inviare pezzi della wakeword a Whisper
-                    
-                    if self._on_wake:
-                        self._on_wake(wakeword_name)
-                    break
+                        prediction = self._wakeword_model.predict(pcm16_oww)
+                        threshold = 0.5
 
-                if self._is_awake:
-                    break
+                        for wakeword_name, score in prediction.items():
+                            if score > threshold:
+                                logger.info(f"✨ Wake Word OWW rilevata: {wakeword_name} ({score:.2f})")
+                                
+                                # --- PULIZIA ATOMICA POST-WAKE ---
+                                self._is_awake = True
+                                self._flush_queue(self._raw_queue)
+                                accumulator = np.array([], dtype=np.float32)
+                                oww_accumulator = np.array([], dtype=np.float32)
+                                speech_buffer = [] 
+                                
+                                if self._on_wake:
+                                    self._on_wake(wakeword_name)
+                                break
+                        if self._is_awake: break
+                continue # Torna a inizio loop per processare l'audio post-wake
 
-                continue
-
-            else:
-                    logger.warning(
-                        f"Wakeword handler sconosciuto: {self._wakeword_handler}"
-                    )
-                    continue
-                
-
+            # --- LOGICA VAD (Solo se sveglio) ---
             accumulator = np.concatenate([accumulator, chunk_16k])
             while len(accumulator) >= self.VAD_FRAME_SAMPLES:
                 frame = accumulator[: self.VAD_FRAME_SAMPLES]
@@ -298,25 +304,25 @@ class SpeechToTextManager:
                     if not self._is_speaking:
                         self._is_speaking = True
                         speech_buffer = []
+                        logger.debug("🎙️ Inizio rilevamento parlato...")
                     speech_buffer.append(frame)
                     last_voice_time = now
                 elif self._is_speaking:
                     speech_buffer.append(frame)
+                    # Se superiamo il timeout di silenzio, chiudiamo il segmento
                     if now - last_voice_time > self._silence_timeout:
                         self._is_speaking = False
                         full_audio = np.concatenate(speech_buffer)
                         duration = len(full_audio) / self.TARGET_SAMPLE_RATE
 
                         if duration >= self.MIN_SPEECH_DURATION_S:
-                            if self._save_audio:
-                                filename = self._save_wav(full_audio, "whisper_segment")
-                                utils.play_audio(filename)
-                            
+                            logger.debug(f"📤 Invio a Whisper: {duration:.2f}s")
                             try:
                                 self._transcription_queue.put_nowait(full_audio)
                             except queue.Full:
                                 logger.warning("Coda trascrizioni piena.")
-                        speech_buffer = []
+                        
+                        speech_buffer = [] # Reset per il prossimo comando
 
     def _transcription_worker(self) -> None:
         while self._running.is_set():
