@@ -7,6 +7,7 @@ import utils
 import time
 from agents.main_agent import MainAgent
 from integrations.telegram_bot import TelegramBot
+from integrations.rest_listener import RestListener
 from event_manager import EventManager
 
 logger = config.logger
@@ -84,6 +85,15 @@ def music_handler(data: dict) -> None:
     elif robot_face:
         robot_face.set_expression(Expression.NEUTRAL)
 
+def message_handler(data: dict) -> None:
+    """Handler per eventi di tipo 'message' (es. da REST API)."""
+    text = data.get("text")
+    if text:
+        logger.info(f"📩 Messaggio da evento: {text}")
+        response = process_message(text)
+        if response:
+            tts.speak(response)
+
 # Definiamo la funzione di callback per elaborare il messaggio
 def process_message(user_message: str) -> str:
     logger.info(f"Messaggio ricevuto: {user_message}")
@@ -97,6 +107,7 @@ if __name__ == "__main__":
     em = EventManager()
     em.subscribe("loading", loading_handler)
     em.subscribe("music", music_handler)
+    em.subscribe("message", message_handler)
     if "--no-face" not in sys.argv:
         robot_face = RobotFaceManager(fullscreen="--windowed" not in sys.argv, bg_color=(10, 10, 20))
         robot_face.start()
@@ -133,8 +144,13 @@ if __name__ == "__main__":
         tts.speak("[[HAPPY]]Salve, sono pronto per assisterti.[[NEUTRAL]]")
         #utils.play_audio(config.SOUNDS["startup"], 0.4)
         logger.info("Ron OS started")
+        # Avvia il listener REST
+        rest_listener = RestListener()
+        rest_listener.start()
+
         if telegram_bot:
             telegram_bot.run()
+
         stt.wait()  # Blocca finché non viene interrotto con CTRL+C
     except KeyboardInterrupt:
         pass

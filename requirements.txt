@@ -19,3 +19,5 @@ piper-tts
 playwright
 yt_dlp
 openwakeword
+uvicorn
+fastapi
