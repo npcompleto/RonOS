@@ -30,7 +30,7 @@ def on_wake(text: str) -> None:
     """Callback invocata quando viene rilevata una parola di risveglio."""
     if robot_face:
         robot_face.set_expression(Expression.THOUGHTFUL)
-        utils.play_audio(config.SOUNDS["wake"])
+        #utils.play_audio(config.SOUNDS["wake"])
     logger.info(f" Ron OS is awake!")
 
 
