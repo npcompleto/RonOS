@@ -225,6 +225,7 @@ class SpeechToTextManager:
             if not pygame.mixer.get_init() or pygame.mixer.music.get_busy():
                 if not stop_listening_logged: 
                     logger.info("Audio is playing, skipping STT")
+                logger.debug("Audio is playing, skipping STT")
                 stop_listening_logged = True
                 self._flush_queue(self._raw_queue) # Svuota costantemente per non accumulare eco
                 continue
@@ -236,7 +237,7 @@ class SpeechToTextManager:
                     oww_accumulator = np.array([], dtype=np.float32)
                     speech_buffer = [] # Reset fondamentale
                     stop_listening_logged = False
-                    logger.debug("✨ Buffer resettati dopo parlato. Pronto.")
+                    logger.info("✨ Buffer resettati dopo parlato. Pronto.")
 
             if not self._is_awake:
                 # --- WAKEWORD HANDLER: VOSK ---
@@ -261,6 +262,8 @@ class SpeechToTextManager:
 
                 # --- WAKEWORD HANDLER: OPENWAKEWORD ---
                 elif self._wakeword_handler == "openwakeword":
+                    if not pygame.mixer.get_init() or pygame.mixer.music.get_busy():
+                        logger.debug("Non dovrei essere qui!")
                     oww_accumulator = np.concatenate([oww_accumulator, chunk_16k])
 
                     while len(oww_accumulator) >= 1280:
