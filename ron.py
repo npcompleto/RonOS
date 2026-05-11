@@ -130,7 +130,7 @@ if __name__ == "__main__":
 
     try:
         stt.start()
-        tts.speak(process_message("Sei stato appena attivato. Salutami brevemente (massimo 10 parole). In modo simpatico."))
+        tts.speak("[[HAPPY]]Salve, sono pronto per assisterti.[[NEUTRAL]]")
         #utils.play_audio(config.SOUNDS["startup"], 0.4)
         logger.info("Ron OS started")
         if telegram_bot:

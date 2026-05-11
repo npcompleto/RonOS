@@ -31,7 +31,7 @@ class RobotFace:
             self.width, self.height = info.current_w, info.current_h
             flags = pygame.FULLSCREEN
         else:
-            self.width, self.height = 800, 480
+            self.width, self.height = 480, 800
             flags = 0
 
         self.screen = pygame.display.set_mode((self.width, self.height), flags)
@@ -85,25 +85,34 @@ class RobotFace:
         self._sync_instantly()
 
     def _set_defaults(self):
-        # Riferimento basato sulla dimensione minore per scalare gli elementi
+        # Riferimento basato sulla dimensione minore per la scala generale
         r = min(self.width, self.height)
         self._ref = r
-        
-        # Determiniamo se lo schermo è "verticale" o "orizzontale"
         is_portrait = self.height > self.width
 
-        # Proporzioni adattive
+        # 1. Definiamo le dimensioni degli occhi
+        eye_w = 0.22 * r
+        eye_h = 0.45 * r  
+        
+        # 2. SPOSTAMENTO VERSO L'ALTO
+        # Ridotto da 0.45 a 0.30 (più basso è il valore, più in alto va il viso)
+        eye_y = 0.30 * self.height 
+
+        # 3. Calcoliamo la posizione della bocca
+        # Rimane ancorata al bordo inferiore degli occhi, quindi salirà insieme a loro
+        mouth_y_aligned = eye_y + (eye_h / 3) + (0.05 * r)
+
         self._t = {
-            "eye_w": 0.28 * r if not is_portrait else 0.35 * r,
-            "eye_h": 0.40 * r if not is_portrait else 0.30 * r,
-            "eye_y": 0.42 * self.height, # Posiziona gli occhi al 42% dell'altezza
+            "eye_w": eye_w,
+            "eye_h": eye_h,
+            "eye_y": eye_y,
             "eye_rot_l": 0.0,
             "eye_rot_r": 0.0,
-            "eye_radius": 0.12 * r,
-            "eye_spacing": 0.22 * self.width, # Spazio tra gli occhi basato sulla LARGHEZZA
-            "mouth_w": 0.25 * r if not is_portrait else 0.40 * r,
-            "mouth_h": 0.06 * r,
-            "mouth_y": 0.75 * self.height, # Posiziona la bocca al 75% dell'altezza
+            "eye_radius": 0.15 * r,
+            "eye_spacing": 0.30 * self.width,
+            "mouth_w": 0.30 * r if is_portrait else 0.20 * r,
+            "mouth_h": 0.05 * r,
+            "mouth_y": mouth_y_aligned, 
             "mouth_curve": 0.3,
             "mouth_open": 1.0,
         }

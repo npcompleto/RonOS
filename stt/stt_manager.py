@@ -19,6 +19,9 @@ from vosk import Model, KaldiRecognizer
 
 from event_manager import EventManager
 
+import openwakeword
+from openwakeword.model import Model as OpenWakeWordModel
+
 logger = logging.getLogger(__name__)
 
 #FIXME bruttino
@@ -85,6 +88,13 @@ class SpeechToTextManager:
         stringa_grammar = json.dumps(lista_parole)
         voskmodel = Model(model_name=f"vosk-model-small-{self._language}-0.22")
         self._wakeword_recognizer = KaldiRecognizer(voskmodel, self.TARGET_SAMPLE_RATE, stringa_grammar)
+
+        # OpenWakeWord setup
+        wakeword_model_path = os.path.join(os.path.dirname(__file__), 'models/Ok_Ron.onnx')
+        if not os.path.exists(wakeword_model_path):
+            raise FileNotFoundError(f"Il file del modello non esiste in: {wakeword_model_path}")
+        openwakeword.utils.download_models()
+        self._wakeword_model = OpenWakeWordModel(wakeword_models=[wakeword_model_path], inference_framework="onnx")
 
         # Code e Stato
         self._raw_queue = queue.Queue(maxsize=self.AUDIO_QUEUE_MAXSIZE)
@@ -194,6 +204,7 @@ class SpeechToTextManager:
         speech_buffer: list[np.ndarray] = []
         last_voice_time: float = 0.0
         accumulator = np.array([], dtype=np.float32)
+        oww_accumulator = np.array([], dtype=np.float32)
         stop_listening_logged = False
         while self._running.is_set():
             try:
@@ -215,7 +226,7 @@ class SpeechToTextManager:
                 logger.debug("Sono in ascolto!")
 
             if not self._is_awake:
-                pcm16 = (np.clip(chunk_16k, -1.0, 1.0) * 32767).astype(np.int16)
+                """pcm16 = (np.clip(chunk_16k, -1.0, 1.0) * 32767).astype(np.int16)
                 if self._wakeword_recognizer.AcceptWaveform(pcm16.tobytes()):
                     result = json.loads(self._wakeword_recognizer.Result())
                     text = result.get("text", "").lower().strip()
@@ -223,7 +234,38 @@ class SpeechToTextManager:
                         if self._save_audio: self._save_wav(chunk_16k, "wake_trigger")
                         self._is_awake = True
                         if self._on_wake: self._on_wake(text)
+                """
+                # Accumuliamo il chunk appena arrivato (già resamplato a 16k)
+                
+                oww_accumulator = np.concatenate([oww_accumulator, chunk_16k])
+                
+                # openWakeWord vuole pezzi da 1280 campioni
+                while len(oww_accumulator) >= 1280:
+                    # Estraiamo i primi 1280 campioni
+                    oww_frame = oww_accumulator[:1280]
+                    oww_accumulator = oww_accumulator[1280:]
+                    
+                    # Conversione in int16
+                    pcm16_oww = (np.clip(oww_frame, -1.0, 1.0) * 32767).astype(np.int16)
+                    print(f"DEBUG: Max Amplitude: {np.abs(pcm16_oww).max()}")
+                    # Predizione
+                    prediction = self._wakeword_model.predict(pcm16_oww)
+                    
+                    threshold = 0.5 # Alza a 0.6 se hai falsi positivi
+                    for wakeword_name, score in prediction.items():
+                        print(f"Wake word: {wakeword_name}, Score: {score}")
+                        if score > threshold:
+                            logger.info(f"✨ Wake Word Rilevata: {wakeword_name} (Score: {score})")
+                            if self._save_audio: 
+                                self._save_wav(oww_frame, "wake_trigger")
+                            
+                            self._is_awake = True
+                            _oww_accumulator = np.array([], dtype=np.float32) # Pulisci l'accumulatore
+                            if self._on_wake: 
+                                self._on_wake(wakeword_name)
+                            break
                 continue
+                
 
             accumulator = np.concatenate([accumulator, chunk_16k])
             while len(accumulator) >= self.VAD_FRAME_SAMPLES:
