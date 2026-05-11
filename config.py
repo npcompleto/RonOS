@@ -103,7 +103,7 @@ VOSK_WAKE_WORDS = ["ciao"]
 
 #WAKEWORD_HANDLER = "vosk"
 # oppure
-WAKEWORD_HANDLER = "openwakeword"
+WAKEWORD_HANDLER = os.getenv("WAKEWORD_HANDLER") or "openwakeword"
 
 SOUNDS = { "wake" : "sounds/bubblepop_in.mp3", "ack" : "sounds/bubblepop_out.mp3", "startup": "sounds/startup.mp3"} 
 
