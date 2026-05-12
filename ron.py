@@ -20,7 +20,7 @@ def on_transcription(text: str) -> None:
     """Callback invocata ad ogni trascrizione completata."""
     logger.info(f"📝 Trascrizione ricevuta: {text}")
     if robot_face:
-        robot_face.set_expression(Expression.NEUTRAL)
+        robot_face.set_expression(Expression.LOADING)
     utils.play_audio(config.SOUNDS["ack"])
     response = process_message(text)
     if response:
