@@ -98,6 +98,14 @@ def message_handler(data: dict) -> None:
         if response:
             tts.speak(response)
 
+def joystick_handler(data: dict) -> None:
+    logger.info(f"Joystick event received: {data}")
+    if data["action"]=='click':
+        utils.stop_audio()
+        if robot_face:
+            robot_face.set_expression(Expression.NEUTRAL)
+            
+
 # Definiamo la funzione di callback per elaborare il messaggio
 def process_message(user_message: str) -> str:
     logger.info(f"Messaggio ricevuto: {user_message}")
@@ -112,6 +120,7 @@ if __name__ == "__main__":
     em.subscribe("loading", loading_handler)
     em.subscribe("music", music_handler)
     em.subscribe("message", message_handler)
+    em.subscribe("joystick", joystick_handler)
     if "--no-face" not in sys.argv:
         robot_face = RobotFaceManager(fullscreen="--windowed" not in sys.argv, bg_color=(10, 10, 20))
         robot_face.start()

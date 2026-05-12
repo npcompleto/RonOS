@@ -287,6 +287,7 @@ class RobotFaceManager:
         self._kwargs = kwargs
         self._parent_conn, self._child_conn = mp.Pipe()
         self._process = None
+        self._listener_thread = None
 
     def _target(self, conn, kwargs):
         face = RobotFace(**kwargs)
@@ -302,6 +303,8 @@ class RobotFaceManager:
             for ev in pygame.event.get():
                 if ev.type == pygame.QUIT: running = False
                 if ev.type == pygame.KEYDOWN and ev.key == pygame.K_ESCAPE: running = False
+                if ev.type == pygame.MOUSEBUTTONDOWN or ev.type == pygame.FINGERDOWN:
+                    conn.send(("CLICK", None))
             face._update(dt)
             face._draw()
             pygame.display.flip()
@@ -312,6 +315,25 @@ class RobotFaceManager:
             self._process = mp.Process(target=self._target, args=(self._child_conn, self._kwargs))
             self._process.daemon = True
             self._process.start()
+            
+            # Avviamo il thread di ascolto per i messaggi di ritorno (es. click)
+            import threading
+            from event_manager import EventManager
+            def listen():
+                em = EventManager()
+                while self._process and self._process.is_alive():
+                    try:
+                        if self._parent_conn.poll(0.1):
+                            cmd, val = self._parent_conn.recv()
+                            if cmd == "CLICK":
+                                em.publish("joystick", {"action": "click"})
+                    except EOFError:
+                        break
+                    except Exception:
+                        break
+            
+            self._listener_thread = threading.Thread(target=listen, daemon=True)
+            self._listener_thread.start()
 
     def stop(self):
         if self._process and self._process.is_alive():

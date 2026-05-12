@@ -45,7 +45,7 @@ def play_audio(filepath, volume=0.8):
             pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=1048)
         if pygame.mixer.music.get_busy():
             return False
-        wake_up_audio()
+        #wake_up_audio()
         # Carica il file (supporta MP3 e WAV)
         pygame.mixer.music.load(filepath)
         
@@ -69,3 +69,7 @@ def play_audio(filepath, volume=0.8):
     except Exception as e:
         config.logger.error(f"Errore durante la riproduzione con pygame: {e}")
         return False
+
+def stop_audio():
+    if pygame.mixer.get_init():
+        pygame.mixer.music.stop()
