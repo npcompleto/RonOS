@@ -38,6 +38,7 @@ class MainAgent(BaseAgent):
                 "Chiudi sempre con [[NEUTRAL]]",
                 "Ad esempio: Ciao! [[HAPPY]] Sono Ron, felicissimo di conoscerti! [[NEUTRAL]]",
                 "Quando devi rispondere usando un tool, esegui prima il tool e poi rispondi all'utente",
+                "Quando ti chiede voti o compiti usa il tool school_agent",
                 "Quando l'utente chiede di ascoltare o fermare la musica o playlist, usa il tool music_agent",
                 "Quando l'utente chiede di ascoltare musica, dopo aver eseguito il tool, rispondi con '[[DANCING]] Ok.', Importante! In questo caso non chiudere con [[NEUTRAL]]",
                 "Non usare mai EMOJI!"

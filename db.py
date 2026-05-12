@@ -30,10 +30,17 @@ def init_db():
             obiettivi TEXT,
             osservazioni TEXT,
             docente TEXT,
+            quadrimestre TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             UNIQUE(data, materia, tipo)
         )
     ''')
+    try:
+        cursor.execute('ALTER TABLE school_ranks ADD COLUMN quadrimestre TEXT')
+    except sqlite3.OperationalError:
+        # Colonna già esistente
+        pass
+        
     conn.commit()
     conn.close()
     print(f"Database initialized at {DB_PATH}")

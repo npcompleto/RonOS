@@ -7,6 +7,7 @@ import os
 import re
 from dotenv import load_dotenv
 import config
+from event_manager import EventManager
 
 
 load_dotenv()
@@ -101,6 +102,8 @@ def extract_week_data(page):
 def axios_login(p, headless=True):
     """ Effettua il login al registro Axios """
     config.logger.info("Avvio login Axios...")
+    em = EventManager()
+    em.publish("loading", {"started": True, "message": "Accesso al Registro in corso..."})
     customer_id = os.getenv("AXIOS_CUSTOMER_ID")
     username = os.getenv("AXIOS_USERNAME")
     password = os.getenv("AXIOS_PASSWORD")
@@ -150,6 +153,8 @@ def axios_login(p, headless=True):
 def axios_sync(weeks_ahead: int = 3):
     """ aggiorna i compiti e le verifiche dal registro Axios per il numero di settimane specificato , se non viene specificato il numero di settimane viene aggiornato per 3 settimane in avanti"""
     config.logger.info("Avvio sincronizzazione Axios...")
+    em = EventManager()
+    
     try:
         p = sync_playwright().start()
         page, browser = axios_login(p)
@@ -160,6 +165,7 @@ def axios_sync(weeks_ahead: int = 3):
         registro_di_classe.click()
             
         extract_week_data(page)
+        em.publish("loading", {"started": True, "message": "Aggiorno gli impegni scolastici"})
         if weeks_ahead >= 1:
             for i in range(weeks_ahead):
                 prev_fdDataValue = page.locator("#fdData").input_value()
