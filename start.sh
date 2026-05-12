@@ -42,6 +42,10 @@ trap cleanup SIGINT
 
 export DISPLAY=:0
 
+echo "--- Aggiornamento Database... ---"
+python db.py
+echo "--- Database aggiornato. ---"
+
 echo "--- Avvio Ron OS... ---"
 python ron.py "$1" "$2" "$3" "$4" "$5" "$6" &
 RON_PID=$!
