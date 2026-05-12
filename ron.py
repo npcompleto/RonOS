@@ -23,6 +23,8 @@ def on_transcription(text: str) -> None:
         robot_face.set_expression(Expression.LOADING)
     utils.play_audio(config.SOUNDS["ack"])
     response = process_message(text)
+    if robot_face:
+        robot_face.set_expression(Expression.NEUTRAL)
     if response:
         tts.speak(response)
 
