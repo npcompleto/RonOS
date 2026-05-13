@@ -21,6 +21,7 @@ def on_transcription(text: str) -> None:
     logger.info(f"📝 Trascrizione ricevuta: {text}")
     if robot_face:
         robot_face.set_expression(Expression.LOADING)
+        robot_face.set_text(text)
     utils.play_audio(config.SOUNDS["ack"])
     response = process_message(text)
     if robot_face:
@@ -86,8 +87,10 @@ def loading_handler(data: dict) -> None:
 def music_handler(data: dict) -> None:
     if data["started"] and robot_face:
         robot_face.set_expression(Expression.DANCING)
+        robot_face.set_text(data["message"])
     elif robot_face:
         robot_face.set_expression(Expression.NEUTRAL)
+        robot_face.set_text("")
 
 def message_handler(data: dict) -> None:
     """Handler per eventi di tipo 'message' (es. da REST API)."""
@@ -163,6 +166,9 @@ if __name__ == "__main__":
 
         if telegram_bot:
             telegram_bot.run()
+
+        if robot_face:
+            robot_face.set_text("Sono pronto!")
 
         stt.wait()  # Blocca finché non viene interrotto con CTRL+C
     except KeyboardInterrupt:

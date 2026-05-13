@@ -8,9 +8,9 @@ cd "$(dirname "$0")"
 
 ENV_NAME="ron311"
 
-echo "--- Aggiornamento Ron OS ---"
-git pull
-echo "--- Aggiornamento completato ---"
+#echo "--- Aggiornamento Ron OS ---"
+#git pull
+#echo "--- Aggiornamento completato ---"
 
 # Inizializza conda nel contesto dello script
 source "$(conda info --base)/etc/profile.d/conda.sh"

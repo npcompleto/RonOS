@@ -54,6 +54,8 @@ class MusicTool:
             filename = self._playlist[self._current_index]
             filepath = os.path.join(self.download_path, filename)
             pygame.mixer.music.load(filepath)
+            em = EventManager()
+            em.publish("music", {"message": filename, "started": True})
             pygame.mixer.music.play()
             logger.info(f"In riproduzione dalla cache: {filename}")
             return filename
