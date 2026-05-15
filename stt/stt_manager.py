@@ -109,13 +109,16 @@ class SpeechToTextManager:
     #                          UTILITY SALVATAGGIO                       #
     # ------------------------------------------------------------------ #
 
-    def _save_wav(self, audio_data: np.ndarray, prefix: str) -> None:
-        """Salva l'audio post-elaborato in formato WAV per debug."""
-        if not self._save_audio:
-            return
-        
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-        filename = os.path.join(self._debug_dir, f"{prefix}_{timestamp}.wav")
+    def _save_wav(self, audio_data: np.ndarray, prefix: str, override_filename: Optional[str] = None) -> str:
+        """Salva l'audio post-elaborato in formato WAV per debug o scopi interni."""
+        # Se c'è un override del nome file, procediamo a prescindere dal flag self._save_audio
+        if override_filename:
+            filename = override_filename
+        elif self._save_audio:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+            filename = os.path.join(self._debug_dir, f"{prefix}_{timestamp}.wav")
+        else:
+            return ""
         
         pcm_data = (np.clip(audio_data, -1.0, 1.0) * 32767).astype(np.int16)
         
@@ -320,6 +323,8 @@ class SpeechToTextManager:
 
                         if duration >= self.MIN_SPEECH_DURATION_S:
                             logger.info(f"📤 Invio a Whisper: {duration:.2f}s")
+                            # Salva l'audio sovrascrivendo sempre lo stesso file
+                            self._save_wav(full_audio, prefix="", override_filename="last_whisper.wav")
                             try:
                                 self._transcription_queue.put_nowait(full_audio)
                             except queue.Full:
