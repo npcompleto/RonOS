@@ -78,11 +78,10 @@ def on_stop_speaking() -> None:
 def loading_handler(data: dict) -> None:
     if data["started"] and robot_face:
         robot_face.set_expression(Expression.LOADING)
+        robot_face.set_text(data["message"])
     elif robot_face:
         robot_face.set_expression(Expression.NEUTRAL)
-    
-    if data["message"]:
-        tts.speak(data["message"])
+        robot_face.set_text("")
 
 def music_handler(data: dict) -> None:
     if data["started"] and robot_face:
@@ -113,7 +112,7 @@ def message_handler(data: dict) -> None:
 def joystick_handler(data: dict) -> None:
     logger.info(f"Joystick event received: {data}")
     if data["action"]=='click':
-        utils.stop_audio()
+        process_message("Spegni la musica")
         if robot_face:
             robot_face.set_expression(Expression.NEUTRAL)
             
@@ -121,6 +120,14 @@ def joystick_handler(data: dict) -> None:
 # Definiamo la funzione di callback per elaborare il messaggio
 def process_message(user_message: str) -> str:
     logger.info(f"Messaggio ricevuto: {user_message}")
+    response = assistant.agent.run(user_message)
+    if robot_face:
+        robot_face.set_text("")
+        robot_face.set_expression(Expression.NEUTRAL)
+    return response.content
+
+def process_telegram_message(user_message: str) -> str:
+    logger.info(f"Messaggio ricevuto da Telegram: {user_message}")
     response = assistant.agent.run(user_message)
     if robot_face:
         robot_face.set_text("")
@@ -162,7 +169,7 @@ if __name__ == "__main__":
     
     # Inizializza e avvia il bot Telegram
     if "--no-telegram" not in sys.argv:
-        telegram_bot = TelegramBot(agent_callback=process_message)
+        telegram_bot = TelegramBot(agent_callback=process_telegram_message)
     else:
         telegram_bot = None
     
