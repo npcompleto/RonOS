@@ -157,7 +157,7 @@ if __name__ == "__main__":
 
     try:
         stt.start()
-        tts.speak("[[HAPPY]]Bella Fra![[NEUTRAL]]")
+        tts.speak("[[HAPPY]]Ciao, Bella Fra! [[NEUTRAL]]")
         #utils.play_audio(config.SOUNDS["startup"], 0.4)
         logger.info("Ron OS started")
         # Avvia il listener REST
