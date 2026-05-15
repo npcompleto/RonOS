@@ -122,6 +122,9 @@ def joystick_handler(data: dict) -> None:
 def process_message(user_message: str) -> str:
     logger.info(f"Messaggio ricevuto: {user_message}")
     response = assistant.agent.run(user_message)
+    if robot_face:
+        robot_face.set_text("")
+        robot_face.set_expression(Expression.NEUTRAL)
     return response.content
     
 
