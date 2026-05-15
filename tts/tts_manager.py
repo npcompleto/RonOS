@@ -5,7 +5,7 @@ import hashlib
 import requests
 from piper import PiperVoice
 import config
-from utils import play_audio
+from utils import play_audio, stop_audio  # <-- Importiamo anche stop_audio
 import re
 import wave
 
@@ -22,6 +22,9 @@ class TextToSpeechManager:
         
         self.queue = queue.Queue()
         self.stop_event = threading.Event()
+        
+        # Evento per interrompere la sintesi e la riproduzione in corso
+        self._abort_speaking = threading.Event()
         
         if not os.path.exists(self.cache_dir):
             os.makedirs(self.cache_dir)
@@ -56,23 +59,14 @@ class TextToSpeechManager:
             self.voice.synthesize(text, wav_file)
 
     def _split_text_and_tags(self, text):
-        # Il pattern identifica due tipi di blocchi:
-        # 1. [[TAG]] -> (\[\[.*?\]\])
-        # 2. Testo che finisce con punteggiatura o fine riga -> ([^\[]+?([.!?]+|\Z))
         pattern = r'(\[\[.*?\]\])|([^\[]+?([.!?]+|(?=\[\[)|\Z))'
-        
-        # Cerchiamo tutte le corrispondenze
         matches = [m.group().strip() for m in re.finditer(pattern, text)]
-        
-        # Pulizia finale per rimuovere stringhe vuote
         return [m for m in matches if m]
 
     def speak(self, text, filename="speech_chunk.wav", play=True):
         if not isinstance(text, str):
             text = str(text)
         
-        # Pulizia testo
-        #text = re.sub(r'[^\w\s\d.,!?;:()\'\"-/]', '', text)
         text = text.replace("**", "")
         sentences = self._split_text_and_tags(text)
         config.logger.info(f"Sentences: {sentences}")
@@ -82,34 +76,73 @@ class TextToSpeechManager:
 
         config.logger.info(f"Ron dice: '{text}' (in {len(sentences)} pezzi)")
         
+        # Reset del flag di interruzione all'inizio di ogni sessione di parlato
+        self._abort_speaking.clear()
+        
         try:
             for i, sentence in enumerate(sentences):
+                # Controllo di sicurezza: se è stato richiesto lo stop, interrompi subito il ciclo
+                if self._abort_speaking.is_set():
+                    config.logger.info("Sintesi interrotta prima di elaborare il pezzo successivo.")
+                    break
+
                 config.logger.info(f"Sintesi pezzo {i+1}/{len(sentences)}: '{sentence}'")
                 if sentence.startswith("[[") and sentence.endswith("]]"):
                     if self.expression_callback:
                         self.expression_callback(sentence[2:-2])
                     continue
                 else:
-                    # Apri come file binario normale, NON con wave.open
                     with wave.open(filename, "wb") as wav_file:
                         has_alnum = any(char.isalnum() for char in sentence)
                         if not has_alnum:
                             config.logger.warning(f"Nessun dato alfanumerico in '{sentence}', salto la sintesi")
                             continue
-                        for j, audio_chunk in enumerate(self.voice.synthesize(sentence)):
-                                if j == 0:
-                                    wav_file.setnchannels(audio_chunk.sample_channels)
-                                    wav_file.setsampwidth(audio_chunk.sample_width)
-                                    wav_file.setframerate(audio_chunk.sample_rate)
-
-                                wav_file.writeframes(audio_chunk.audio_int16_bytes)
                         
+                        for j, audio_chunk in enumerate(self.voice.synthesize(sentence)):
+                            # Ulteriore controllo granulare durante la generazione di Piper
+                            if self._abort_speaking.is_set():
+                                break
+                            
+                            if j == 0:
+                                wav_file.setnchannels(audio_chunk.sample_channels)
+                                wav_file.setsampwidth(audio_chunk.sample_width)
+                                wav_file.setframerate(audio_chunk.sample_rate)
+
+                            wav_file.writeframes(audio_chunk.audio_int16_bytes)
+                        
+                        # Se l'interruzione è avvenuta durante la generazione del file, esci dal ciclo
+                        if self._abort_speaking.is_set():
+                            break
+
                         if self.start_speaking_callback:
                             self.start_speaking_callback()
+                        
                         if play:
+                            # Nota: play_audio è bloccante, ma se stop_speaking() viene chiamato da un altro 
+                            # thread, stop_audio() sbloccherà immediatamente l'attesa all'interno di play_audio.
                             play_audio(filename, volume=0.5)
+                        
                         if self.stop_speaking_callback:
                             self.stop_speaking_callback()
                     
         except Exception as e:
             config.logger.error(f"Errore durante la sintesi vocale: {e}")
+        finally:
+            # Pulizia finale dello stato se interrotto
+            if self._abort_speaking.is_set():
+                if self.stop_speaking_callback:
+                    self.stop_speaking_callback()
+                config.logger.info("Pipeline TTS resettata dopo interruzione.")
+
+    def stop_speaking(self):
+        """
+        Interrompe immediatamente la sintesi e la riproduzione dell'audio in corso.
+        Sicuro da chiamare da thread esterni (es. thread VAD/Wake Word).
+        """
+        config.logger.info("🛑 Richiesta interruzione riproduzione vocale...")
+        
+        # 1. Attiva il flag per bloccare i cicli interni di speak()
+        self._abort_speaking.set()
+        
+        # 2. Interrompe immediatamente l'audio a livello hardware tramite Pygame (Canale 0)
+        stop_audio()

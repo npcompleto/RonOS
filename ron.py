@@ -112,10 +112,13 @@ def message_handler(data: dict) -> None:
 def joystick_handler(data: dict) -> None:
     logger.info(f"Joystick event received: {data}")
     if data["action"]=='click':
-        process_message("Spegni la musica")
-        if robot_face:
-            robot_face.set_expression(Expression.NEUTRAL)
-            robot_face.set_text("")
+        if utils.is_playing_music():
+            process_message("Spegni la musica")
+            if robot_face:
+                robot_face.set_expression(Expression.NEUTRAL)
+                robot_face.set_text("")
+        tts.stop_speaking()
+        utils.stop_audio()
             
 
 # Definiamo la funzione di callback per elaborare il messaggio

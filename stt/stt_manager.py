@@ -225,7 +225,7 @@ class SpeechToTextManager:
             pcm16 = (np.clip(chunk_16k, -1.0, 1.0) * 32767).astype(np.int16)
 
             # --- LOGICA DI FILTRO AUDIO IN USCITA (Robot che parla) ---
-            if not pygame.mixer.get_init() or pygame.mixer.music.get_busy():
+            if utils.is_playing_music() or utils.is_robot_speaking():
                 if not stop_listening_logged: 
                     logger.info("Audio is playing, skipping STT")
                 logger.debug("Audio is playing, skipping STT")

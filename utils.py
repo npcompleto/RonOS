@@ -3,29 +3,50 @@ import os
 import config
 import time
 
+# Canale dedicato per la riproduzione della voce/risposte del robot
+# Inizializzato a None, verrà assegnato dopo il mixer.init()
+_voice_channel = None
+
+def get_voice_channel():
+    """Restituisce il canale dedicato, inizializzandolo se necessario."""
+    global _voice_channel
+    if not pygame.mixer.get_init():
+        # Parametri ottimizzati per Raspberry Pi
+        pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=1048)
+    
+    if _voice_channel is None:
+        # Prende un canale specifico (es. il canale 0) per avere il controllo assoluto
+        _voice_channel = pygame.mixer.Channel(0)
+    return _voice_channel
+
+def is_robot_speaking():
+    """
+    Utility da usare anche nel codice STT.
+    Ritorna True se il canale della voce sta riproducendo audio.
+    """
+    if not pygame.mixer.get_init():
+        return False
+    return get_voice_channel().get_busy()
+
 def wake_up_audio():
     """Invia un segnale minimo per forzare l'attivazione della scheda audio."""
-    # Creiamo un suono brevissimo (0.1 secondi) con un valore minimo per 'muovere' i driver
-    # Invece di zero assoluto, usiamo un'alternanza minima
     sample_rate = 44100
     duration = 0.1 
-    # Genera un'onda quadra a volume quasi zero
     buf = bytearray([128 if i % 2 == 0 else 127 for i in range(int(sample_rate * duration))])
     
     wake_sound = pygame.mixer.Sound(buffer=buf)
-    wake_sound.set_volume(0.01) # Volume quasi nullo
-    ch = wake_sound.play()
-    while ch.get_busy():
-        pygame.time.delay(10)
+    wake_sound.set_volume(0.01)
     
-    # IMPORTANTE: Piccolo stop per dare tempo al driver di stabilizzarsi
+    # Usiamo un canale generico per il wake-up per non disturbare il canale principale
+    ch = wake_sound.play()
+    if ch:
+        while ch.get_busy():
+            pygame.time.delay(10)
     time.sleep(0.3)
-
-
 
 def play_audio(filepath, volume=0.8):
     """
-    Riproduce un file audio (MP3 o WAV) utilizzando pygame.
+    Riproduce un file audio (WAV o MP3) come Sound su un canale dedicato.
     
     Args:
         filepath (str): Percorso del file audio.
@@ -39,37 +60,45 @@ def play_audio(filepath, volume=0.8):
         return False
 
     try:
-        # Inizializza il mixer se non è già attivo
-        if not pygame.mixer.get_init():
-            # Parametri ottimizzati per Raspberry Pi
-            pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=1048)
-        if pygame.mixer.music.get_busy():
-            return False
-        #wake_up_audio()
-        # Carica il file (supporta MP3 e WAV)
-        pygame.mixer.music.load(filepath)
-        
-        # Imposta il volume
-        pygame.mixer.music.set_volume(volume)
-        
-        config.logger.info(f"Riproduzione in corso: {filepath} (Volume: {int(volume*100)}%)")
-        
-        # Avvia la riproduzione
-        pygame.mixer.music.play()
+        # Ottieni il canale dedicato (gestisce internamente l'init del mixer)
+        channel = get_voice_channel()
 
-        # Attendi la fine del brano (bloccante)
-        while pygame.mixer.music.get_busy():
+        # Se il robot sta già parlando, evitiamo di sovrapporre l'audio
+        if channel.get_busy():
+            config.logger.warning("Il canale audio è già occupato.")
+            return False
+
+        wake_up_audio()
+
+        # Carica il file come Sound (Pygame 2.+ supporta nativamente anche gli MP3 qui)
+        sound = pygame.mixer.Sound(filepath)
+        sound.set_volume(volume)
+        
+        config.logger.info(f"Riproduzione in corso (Channel 0): {filepath} (Volume: {int(volume*100)}%)")
+        
+        # Riproduce il suono specificatamente sul nostro canale dedicato
+        channel.play(sound)
+
+        # Attendi la fine del brano (bloccante) interrogando il canale
+        while channel.get_busy():
             pygame.time.Clock().tick(10) # Riduce il carico sulla CPU nel loop
             
-        # Attesa aggiuntiva per assicurare il rilascio completo del device
         time.sleep(0.3)
-            
         return True
 
     except Exception as e:
-        config.logger.error(f"Errore durante la riproduzione con pygame: {e}")
+        config.logger.error(f"Errore durante la riproduzione con pygame.mixer.Sound: {e}")
         return False
 
 def stop_audio():
+    """Ferma immediatamente la riproduzione sul canale dedicato."""
     if pygame.mixer.get_init():
-        pygame.mixer.music.stop()
+        get_voice_channel().stop()
+
+def is_playing_music():
+    """
+    Ritorna True se pygame.mixer.music sta riproducendo la musica.
+    """
+    if not pygame.mixer.get_init():
+        return False
+    return pygame.mixer.music.get_busy()
