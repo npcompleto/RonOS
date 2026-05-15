@@ -18,8 +18,9 @@ logging.basicConfig(
     force=True  # Obbliga l'uso di questa configurazione
 )
 
-logging.getLogger("faster_whisper").setLevel(logging.WARNING)
-logging.getLogger("httpx").setLevel(logging.WARNING)
+for log_class in DISABLED_LOGS:
+    logging.getLogger(log_class).setLevel(logging.WARNING)
+
 logger = logging.getLogger("config")
 
 # --- Configurazione Audio ---
