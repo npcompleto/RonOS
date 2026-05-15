@@ -92,6 +92,15 @@ def music_handler(data: dict) -> None:
         robot_face.set_expression(Expression.NEUTRAL)
         robot_face.set_text("")
 
+def downloading_handler(data: dict) -> None:
+    logger.info(f"Downloading handler: {data}")
+    if data["started"] and robot_face:
+        robot_face.set_expression(Expression.DOWNLOADING)
+        robot_face.set_text(data["message"])
+    elif robot_face:
+        robot_face.set_expression(Expression.NEUTRAL)
+        robot_face.set_text("")
+
 def message_handler(data: dict) -> None:
     """Handler per eventi di tipo 'message' (es. da REST API)."""
     text = data.get("text")
@@ -124,6 +133,7 @@ if __name__ == "__main__":
     em.subscribe("music", music_handler)
     em.subscribe("message", message_handler)
     em.subscribe("joystick", joystick_handler)
+    em.subscribe("downloading", downloading_handler)
     if "--no-face" not in sys.argv:
         robot_face = RobotFaceManager(fullscreen="--windowed" not in sys.argv, bg_color=(10, 10, 20))
         robot_face.start()
@@ -166,9 +176,6 @@ if __name__ == "__main__":
 
         if telegram_bot:
             telegram_bot.run()
-
-        if robot_face:
-            robot_face.set_text("Sono pronto!")
 
         stt.wait()  # Blocca finché non viene interrotto con CTRL+C
     except KeyboardInterrupt:

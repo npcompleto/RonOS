@@ -22,6 +22,7 @@ class Expression(Enum):
     SLEEPING = "sleeping"
     LOADING = "loading"
     DANCING = "dancing"
+    DOWNLOADING = "downloading"
 
 class RobotFace:
     def __init__(self, bg_color=(20, 20, 30), eye_color=(0, 210, 255), 
@@ -74,6 +75,7 @@ class RobotFace:
         self._eye_offset_x = 0.0
         self._eye_offset_y = 0.0
         self._loading_angle = 0.0 
+        self._download_progress = 0.0
         self.dance_rhythm = 6.0
         self._dance_timer = 0.0
 
@@ -171,6 +173,9 @@ class RobotFace:
         elif e == Expression.DANCING:
             self._t["eye_w"], self._t["eye_h"] = 0.28*r, 0.38*r
             self._t["mouth_curve"], self._t["mouth_w"] = 0.6, 0.26*r
+        elif e == Expression.DOWNLOADING:
+            self._t["eye_w"], self._t["eye_h"] = 0.25*r, 0.35*r
+            self._t["mouth_w"], self._t["mouth_h"], self._t["mouth_curve"] = 0.15*r, 0.01*r, 0.0
 
     def _sync_instantly(self):
         for k, v in self._t.items(): setattr(self, f"_{k}", v)
@@ -191,7 +196,12 @@ class RobotFace:
         
         if self._expression == Expression.LOADING:
             self._loading_angle += dt * 360
-        
+
+        if self._expression == Expression.DOWNLOADING:
+            self._download_progress += dt * 0.25
+            if self._download_progress > 1.0:
+                self._download_progress = 0.0
+
         target_off_x = target_off_y = 0.0
         if self._expression == Expression.DANCING:
             self._dance_timer += dt
@@ -205,7 +215,7 @@ class RobotFace:
 
         self._eye_offset_x, self._eye_offset_y = target_off_x, target_off_y
         
-        block_blink = [Expression.SLEEPING, Expression.IN_LOVE, Expression.LOADING, Expression.HAPPY]
+        block_blink = [Expression.SLEEPING, Expression.IN_LOVE, Expression.LOADING, Expression.HAPPY,Expression.DOWNLOADING]
         if self._auto_blink and self._expression not in block_blink:
             self._blink_timer += dt
             if self._blink_timer >= self._next_blink:
@@ -266,6 +276,28 @@ class RobotFace:
             surf.blit(arc_surf, (0, 0))
         elif self._expression == Expression.IN_LOVE:
             self._draw_heart(surf, color, rect)
+            
+        elif self._expression == Expression.DOWNLOADING: # <--- NUOVA LOGICA DI RENDERING
+            # Colore di sfondo dell'occhio "vuoto" (es. versione molto scura del colore originale)
+            bg_eye_color = (int(color[0]*0.2), int(color[1]*0.2), int(color[2]*0.2))
+            # Colore di riempimento più chiaro (es. azzurro neon molto luminoso / bianco-azzurro)
+            fill_color = (min(255, int(color[0] * 1.3 + 50)), min(255, int(color[1] * 1.3 + 50)), min(255, int(color[2] * 1.3 + 50)))
+            
+            # 1. Disegna la sagoma di sfondo dell'occhio
+            pygame.draw.rect(surf, bg_eye_color, rect, border_radius=int(self._eye_radius))
+            
+            # 2. Crea una superficie speculare per la barra di avanzamento e applica il clip dal basso
+            progress_surf = pygame.Surface((w * 2, h * 2), pygame.SRCALPHA)
+            pygame.draw.rect(progress_surf, fill_color, rect, border_radius=int(self._eye_radius))
+            
+            # Calcola l'altezza del riempimento in base al progresso corrente
+            fill_h = int(h * self._download_progress)
+            # Il clip parte da (y + h - fill_h) perché l'origine di Pygame (0,0) è in alto a sinistra
+            clip_rect = pygame.Rect(w // 2, (h // 2) + h - fill_h, w, fill_h)
+            
+            # Blitta solo la porzione sbloccata dal clip_rect
+            surf.blit(progress_surf, clip_rect, clip_rect)
+            
         else:
             pygame.draw.rect(surf, color, rect, border_radius=int(self._eye_radius))
             rot = self._eye_rot_l if side < 0 else self._eye_rot_r

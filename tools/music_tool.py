@@ -107,7 +107,7 @@ class MusicTool:
         """Scarica da YouTube e riproduce (interrompe playlist se attiva)."""
         logger.debug(f"Scaricamento di '{query}'...")
         em = EventManager()
-        em.publish("loading", {"message": f"Sto scaricando {query}", "started": True})
+        
         self.stop()
         try:
             ydl_opts = {
@@ -123,11 +123,15 @@ class MusicTool:
                 'no_overwrites': True
             }
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                em.publish("downloading", {"message": f"Sto scaricando {query}", "started": True})
+                info = ydl.extract_info(query, download=False)
+                logger.info(f"Video info: {info}")
+                
                 info = ydl.extract_info(query, download=True)
                 video_info = info['entries'][0]
-                logger.debug(f"Video info: {video_info}")
+                
                 filename = ydl.prepare_filename(video_info).rsplit('.', 1)[0] + ".mp3"
-                em.publish("loading", {"message": None, "started": False})
+                em.publish("downloading", {"message": None, "started": False})
                 pygame.mixer.music.load(filename)
                 em.publish("music", {"message": None, "started": True})
                 pygame.mixer.music.play()
