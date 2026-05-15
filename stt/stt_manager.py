@@ -307,7 +307,7 @@ class SpeechToTextManager:
                     if not self._is_speaking:
                         self._is_speaking = True
                         speech_buffer = []
-                        logger.debug("🎙️ Inizio rilevamento parlato...")
+                        logger.info("🎙️ Inizio rilevamento parlato...")
                     speech_buffer.append(frame)
                     last_voice_time = now
                 elif self._is_speaking:
@@ -319,7 +319,7 @@ class SpeechToTextManager:
                         duration = len(full_audio) / self.TARGET_SAMPLE_RATE
 
                         if duration >= self.MIN_SPEECH_DURATION_S:
-                            logger.debug(f"📤 Invio a Whisper: {duration:.2f}s")
+                            logger.info(f"📤 Invio a Whisper: {duration:.2f}s")
                             try:
                                 self._transcription_queue.put_nowait(full_audio)
                             except queue.Full:
