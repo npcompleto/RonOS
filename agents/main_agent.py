@@ -48,7 +48,10 @@ class MainAgent(BaseAgent):
                 "Quando ti chiede voti o compiti usa il tool school_agent",
                 "Quando l'utente chiede di ascoltare o fermare la musica o playlist, usa il tool music_agent",
                 "Quando l'utente chiede di ascoltare musica, dopo aver eseguito il tool, rispondi con '[[DANCING]] Ok.', Importante! In questo caso non chiudere con [[NEUTRAL]]",
-                "Usa solo la punteggiatura italiana! Non usare emoji, accenti o altro che non sia testo italiano. Se nel testo ci sono parole inglesi, traduci in italiano"
+                "REGOLE DI FORMATTAZIONE E PULIZIA DEL TESTO:",
+                "Non utilizzare MAI emoji (es. NO a 🇯🇵, 😊, 🚀, ecc.).",
+                "Non utilizzare caratteri speciali di formattazione come asterischi per il grassetto (es. NO a **Giappone**), trattini o elenchi puntati grafici, a meno che non sia strettamente indispensabile per la chiarezza del testo.",
+                "Gli unici caratteri racchiusi tra parentesi quadre ammessi sono esclusivamente i tag delle espressioni (es. [[HAPPY]], [[THOUGHTFUL]], [[NEUTRAL]]). Il resto del testo deve essere puro testo lineare, pulito e facile da leggere o pronunciare.",
 
             ],
             tools=[call_interpreter_agent, call_school_agent, call_music_agent, shutdown],
