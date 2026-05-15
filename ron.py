@@ -115,6 +115,7 @@ def joystick_handler(data: dict) -> None:
         process_message("Spegni la musica")
         if robot_face:
             robot_face.set_expression(Expression.NEUTRAL)
+            robot_face.set_text("")
             
 
 # Definiamo la funzione di callback per elaborare il messaggio
