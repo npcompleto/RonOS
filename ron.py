@@ -113,6 +113,7 @@ def joystick_handler(data: dict) -> None:
     logger.info(f"Joystick event received: {data}")
     if data["action"]=='click':
         if utils.is_playing_music():
+            robot_face.set_text("Spengo la musica...")
             process_message("Spegni la musica")
             if robot_face:
                 robot_face.set_expression(Expression.NEUTRAL)
