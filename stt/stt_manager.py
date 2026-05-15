@@ -326,6 +326,8 @@ class SpeechToTextManager:
                                 logger.warning("Coda trascrizioni piena.")
                         
                         speech_buffer = [] # Reset per il prossimo comando
+                else:
+                    logger.debug("No speech detected")
 
     def _transcription_worker(self) -> None:
         while self._running.is_set():
