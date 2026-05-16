@@ -1,0 +1,258 @@
+{
+  "title": "Verifica Esaustiva di Geometria",
+  "total_questions": 42,
+  "questions": [
+    {
+      "id": 1,
+      "question": "Qual è l'unità di misura della lunghezza nel Sistema Internazionale?",
+      "answer": "Metro (m)",
+      "options": ["Metro (m)", "Centimetro (cm)", "Chilometro (km)", "Millimetro (mm)"]
+    },
+    {
+      "id": 2,
+      "question": "Quanti centimetri equivalgono a 1 metro?",
+      "answer": "100 cm",
+      "options": ["10 cm", "100 cm", "1000 cm", "1 cm"]
+    },
+    {
+      "id": 3,
+      "question": "Qual è l'unità di misura della superficie?",
+      "answer": "Metro quadrato (m²)",
+      "options": ["Metro (m)", "Metro quadrato (m²)", "Metro cubo (m³)", "Litro (L)"]
+    },
+    {
+      "id": 4,
+      "question": "Quanti millimetri quadrati equivalgono a 1 centimetro quadrato?",
+      "answer": "100 mm²",
+      "options": ["10 mm²", "100 mm²", "1000 mm²", "50 mm²"]
+    },
+    {
+      "id": 5,
+      "question": "Qual è l'unità di misura del volume?",
+      "answer": "Metro cubo (m³)",
+      "options": ["Metro (m)", "Metro quadrato (m²)", "Metro cubo (m³)", "Litro (L)"]
+    },
+    {
+      "id": 6,
+      "question": "Quanti litri equivalgono a 1 metro cubo?",
+      "answer": "1000 litri",
+      "options": ["100 litri", "500 litri", "1000 litri", "10000 litri"]
+    },
+    {
+      "id": 7,
+      "question": "Nel piano cartesiano, qual è il punto di intersezione degli assi?",
+      "answer": "Origine (0, 0)",
+      "options": ["Punto (1, 1)", "Origine (0, 0)", "Punto (1, 0)", "Punto (0, 1)"]
+    },
+    {
+      "id": 8,
+      "question": "Quali sono le coordinate del punto A se si trova 3 unità a destra e 2 unità in alto rispetto all'origine?",
+      "answer": "(3, 2)",
+      "options": ["(2, 3)", "(3, 2)", "(-3, 2)", "(3, -2)"]
+    },
+    {
+      "id": 9,
+      "question": "Che cos'è un segmento?",
+      "answer": "La parte di retta compresa tra due punti",
+      "options": ["Una retta infinita", "La parte di retta compresa tra due punti", "Un angolo", "Un poligono"]
+    },
+    {
+      "id": 10,
+      "question": "Due segmenti si dicono congruenti quando:",
+      "answer": "Hanno la stessa lunghezza",
+      "options": ["Hanno la stessa direzione", "Hanno la stessa lunghezza", "Sono paralleli", "Sono perpendicolari"]
+    },
+    {
+      "id": 11,
+      "question": "Qual è la somma degli angoli interni di un triangolo?",
+      "answer": "180°",
+      "options": ["90°", "180°", "270°", "360°"]
+    },
+    {
+      "id": 12,
+      "question": "Un triangolo rettangolo ha un angolo di 90°. Se uno degli altri angoli è 35°, quanto misura il terzo angolo?",
+      "answer": "55°",
+      "options": ["45°", "55°", "65°", "75°"]
+    },
+    {
+      "id": 13,
+      "question": "Qual è la formula per calcolare l'area di un triangolo?",
+      "answer": "A = (base × altezza) / 2",
+      "options": ["A = base × altezza", "A = (base × altezza) / 2", "A = base + altezza", "A = base² + altezza²"]
+    },
+    {
+      "id": 14,
+      "question": "Un triangolo equilatero ha tutti i lati di 6 cm. Qual è il perimetro?",
+      "answer": "18 cm",
+      "options": ["12 cm", "18 cm", "24 cm", "36 cm"]
+    },
+    {
+      "id": 15,
+      "question": "Un triangolo isoscele ha due lati di 8 cm e la base di 6 cm. Qual è il perimetro?",
+      "answer": "22 cm",
+      "options": ["14 cm", "20 cm", "22 cm", "24 cm"]
+    },
+    {
+      "id": 16,
+      "question": "Qual è la somma degli angoli interni di un quadrilatero?",
+      "answer": "360°",
+      "options": ["180°", "270°", "360°", "540°"]
+    },
+    {
+      "id": 17,
+      "question": "Qual è la formula per calcolare l'area di un rettangolo?",
+      "answer": "A = lunghezza × larghezza",
+      "options": ["A = lato²", "A = lunghezza × larghezza", "A = (lunghezza + larghezza) / 2", "A = lunghezza + larghezza"]
+    },
+    {
+      "id": 18,
+      "question": "Un rettangolo ha lunghezza 10 cm e larghezza 5 cm. Qual è l'area?",
+      "answer": "50 cm²",
+      "options": ["15 cm²", "30 cm²", "50 cm²", "100 cm²"]
+    },
+    {
+      "id": 19,
+      "question": "Qual è la formula per calcolare l'area di un quadrato?",
+      "answer": "A = lato²",
+      "options": ["A = lato × 2", "A = lato²", "A = lato × 4", "A = lato / 2"]
+    },
+    {
+      "id": 20,
+      "question": "Un quadrato ha lato 7 cm. Qual è il perimetro?",
+      "answer": "28 cm",
+      "options": ["14 cm", "21 cm", "28 cm", "49 cm"]
+    },
+    {
+      "id": 21,
+      "question": "Qual è la formula per calcolare l'area di un parallelogramma?",
+      "answer": "A = base × altezza",
+      "options": ["A = base + altezza", "A = base × altezza", "A = (base × altezza) / 2", "A = base² + altezza²"]
+    },
+    {
+      "id": 22,
+      "question": "Un parallelogramma ha base 12 cm e altezza 5 cm. Qual è l'area?",
+      "answer": "60 cm²",
+      "options": ["17 cm²", "34 cm²", "60 cm²", "120 cm²"]
+    },
+    {
+      "id": 23,
+      "question": "Qual è la formula per calcolare l'area di un rombo?",
+      "answer": "A = (diagonale1 × diagonale2) / 2",
+      "options": ["A = lato²", "A = base × altezza", "A = (diagonale1 × diagonale2) / 2", "A = lato × 4"]
+    },
+    {
+      "id": 24,
+      "question": "Un rombo ha diagonali di 8 cm e 6 cm. Qual è l'area?",
+      "answer": "24 cm²",
+      "options": ["14 cm²", "24 cm²", "48 cm²", "56 cm²"]
+    },
+    {
+      "id": 25,
+      "question": "Qual è la formula per calcolare l'area di un trapezio?",
+      "answer": "A = [(base1 + base2) × altezza] / 2",
+      "options": ["A = base × altezza", "A = [(base1 + base2) × altezza] / 2", "A = (base1 × base2) / 2", "A = base1 + base2"]
+    },
+    {
+      "id": 26,
+      "question": "Un trapezio ha basi di 10 cm e 6 cm e altezza di 4 cm. Qual è l'area?",
+      "answer": "32 cm²",
+      "options": ["24 cm²", "28 cm²", "32 cm²", "40 cm²"]
+    },
+    {
+      "id": 27,
+      "question": "Qual è la formula per calcolare la circonferenza di un cerchio?",
+      "answer": "C = 2πr",
+      "options": ["C = πr", "C = 2πr", "C = πr²", "C = πd²"]
+    },
+    {
+      "id": 28,
+      "question": "Un cerchio ha raggio 5 cm. Qual è la circonferenza? (usa π ≈ 3,14)",
+      "answer": "31,4 cm",
+      "options": ["15,7 cm", "31,4 cm", "78,5 cm", "157 cm"]
+    },
+    {
+      "id": 29,
+      "question": "Qual è la formula per calcolare l'area di un cerchio?",
+      "answer": "A = πr²",
+      "options": ["A = πr", "A = 2πr", "A = πr²", "A = πd"]
+    },
+    {
+      "id": 30,
+      "question": "Un cerchio ha raggio 4 cm. Qual è l'area? (usa π ≈ 3,14)",
+      "answer": "50,24 cm²",
+      "options": ["12,56 cm²", "25,12 cm²", "50,24 cm²", "100,48 cm²"]
+    },
+    {
+      "id": 31,
+      "question": "Che cos'è il baricentro di un triangolo?",
+      "answer": "Il punto di intersezione delle tre mediane",
+      "options": ["Il punto di intersezione delle tre altezze", "Il punto di intersezione delle tre mediane", "Il punto di intersezione dei tre assi", "Il punto di intersezione delle tre bisettrici"]
+    },
+    {
+      "id": 32,
+      "question": "Che cos'è l'incentro di un triangolo?",
+      "answer": "Il punto di intersezione delle tre bisettrici",
+      "options": ["Il punto di intersezione delle tre mediane", "Il punto di intersezione delle tre altezze", "Il punto di intersezione delle tre bisettrici", "Il punto di intersezione dei tre assi"]
+    },
+    {
+      "id": 33,
+      "question": "Che cos'è il circocentro di un triangolo?",
+      "answer": "Il punto di intersezione dei tre assi",
+      "options": ["Il punto di intersezione delle tre mediane", "Il punto di intersezione delle tre altezze", "Il punto di intersezione dei tre assi", "Il punto di intersezione delle tre bisettrici"]
+    },
+    {
+      "id": 34,
+      "question": "Che cos'è l'ortocentro di un triangolo?",
+      "answer": "Il punto di intersezione delle tre altezze",
+      "options": ["Il punto di intersezione delle tre mediane", "Il punto di intersezione delle tre altezze", "Il punto di intersezione dei tre assi", "Il punto di intersezione delle tre bisettrici"]
+    },
+    {
+      "id": 35,
+      "question": "Qual è la formula per calcolare l'area di un poligono regolare?",
+      "answer": "A = (perimetro × apotema) / 2",
+      "options": ["A = lato²", "A = (perimetro × apotema) / 2", "A = base × altezza", "A = lato × numero lati"]
+    },
+    {
+      "id": 36,
+      "question": "Un esagono regolare ha lato 4 cm. Qual è il perimetro?",
+      "answer": "24 cm",
+      "options": ["12 cm", "18 cm", "24 cm", "36 cm"]
+    },
+    {
+      "id": 37,
+      "question": "PROBLEMA: Un triangolo rettangolo ha cateti di 6 cm e 8 cm. Calcola l'ipotenusa usando il teorema di Pitagora.",
+      "answer": "10 cm",
+      "options": ["7 cm", "9 cm", "10 cm", "12 cm"]
+    },
+    {
+      "id": 38,
+      "question": "PROBLEMA: Un rettangolo ha perimetro di 30 cm e lunghezza di 10 cm. Qual è la larghezza?",
+      "answer": "5 cm",
+      "options": ["3 cm", "5 cm", "7 cm", "10 cm"]
+    },
+    {
+      "id": 39,
+      "question": "PROBLEMA: Un trapezio isoscele ha basi di 12 cm e 8 cm e lati obliqui di 5 cm. Calcola il perimetro.",
+      "answer": "30 cm",
+      "options": ["25 cm", "28 cm", "30 cm", "35 cm"]
+    },
+    {
+      "id": 40,
+      "question": "PROBLEMA: Un cerchio ha circonferenza di 62,8 cm. Qual è il raggio? (usa π ≈ 3,14)",
+      "answer": "10 cm",
+      "options": ["5 cm", "8 cm", "10 cm", "15 cm"]
+    },
+    {
+      "id": 41,
+      "question": "PROBLEMA: Un quadrato ha area di 64 cm². Qual è il perimetro?",
+      "answer": "32 cm",
+      "options": ["16 cm", "24 cm", "32 cm", "48 cm"]
+    },
+    {
+      "id": 42,
+      "question": "PROBLEMA: Un triangolo equilatero ha perimetro di 45 cm. Qual è la lunghezza di ogni lato?",
+      "answer": "15 cm",
+      "options": ["10 cm", "12 cm", "15 cm", "20 cm"]
+    }
+  ]
+}

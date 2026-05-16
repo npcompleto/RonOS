@@ -5,8 +5,20 @@ from pydantic import BaseModel
 from event_manager import EventManager
 from config import logger
 
+from fastapi.middleware.cors import CORSMiddleware
+import os
+import json
+
 app = FastAPI(title="Ron REST Listener")
 event_manager = EventManager()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class MessageRequest(BaseModel):
     message: str
@@ -29,6 +41,34 @@ async def send_message(request: MessageRequest):
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+@app.get("/api/quizzes")
+async def list_quizzes():
+    knowledge_dir = "agents/knowledge"
+    if not os.path.exists(knowledge_dir):
+        return {"quizzes": []}
+    
+    quizzes = []
+    for file in os.listdir(knowledge_dir):
+        if file.endswith(".json") and "test" in file:
+            quizzes.append(file)
+    return {"quizzes": quizzes}
+
+@app.get("/api/quizzes/{filename}")
+async def get_quiz(filename: str):
+    if not filename.endswith(".json") or ".." in filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+        
+    filepath = os.path.join("agents/knowledge", filename)
+    if not os.path.exists(filepath):
+        raise HTTPException(status_code=404, detail="Quiz not found")
+        
+    try:
+        with open(filepath, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            return data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 class RestListener:
     def __init__(self, host="0.0.0.0", port=8001):

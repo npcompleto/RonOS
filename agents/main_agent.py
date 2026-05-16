@@ -2,6 +2,7 @@ from agents.base_agent import BaseAgent
 from agents.interpreter_agent import InterpreterAgent
 from agents.school_agent import SchoolAgent
 from agents.music_agent import MusicAgent
+from agents.teacher_agent import TeacherAgent
 from langchain_core.tools import tool
 from tools.system import shutdown
 
@@ -22,6 +23,12 @@ music_agent = MusicAgent()
 @tool("music_agent", description="Utilizza questo tool quando l'utente chiede di riprodurre musica, playlist o canzoni o fermare la riproduzione")
 def call_music_agent(query: str):
     result = music_agent.agent.run(query)
+    return result.content
+
+teacher_agent = TeacherAgent()
+@tool("teacher_agent", description="Utilizza questo tool quando l'utente chiede di preparare verifiche o interrogazioni di matematica o scienze")
+def call_teacher_agent(query: str):
+    result = teacher_agent.agent.run(query)
     return result.content
 
 class MainAgent(BaseAgent):
@@ -52,8 +59,9 @@ class MainAgent(BaseAgent):
                 "Non utilizzare MAI emoji (es. NO a 🇯🇵, 😊, 🚀, ecc.).",
                 "Non utilizzare caratteri speciali di formattazione come asterischi per il grassetto (es. NO a **Giappone**), trattini o elenchi puntati grafici, a meno che non sia strettamente indispensabile per la chiarezza del testo.",
                 "Gli unici caratteri racchiusi tra parentesi quadre ammessi sono esclusivamente i tag delle espressioni (es. [[HAPPY]], [[THOUGHTFUL]], [[NEUTRAL]]). Il resto del testo deve essere puro testo lineare, pulito e facile da leggere o pronunciare.",
+                "Quando l'utente chiede di preparare verifiche o interrogazioni di matematica o scienze, usa il tool teacher_agent"
 
             ],
-            tools=[call_interpreter_agent, call_school_agent, call_music_agent, shutdown],
+            tools=[call_interpreter_agent, call_school_agent, call_music_agent, call_teacher_agent, shutdown],
             enable_memory=True
         )

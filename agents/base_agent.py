@@ -59,7 +59,7 @@ class LangChainAgentWrapper:
         if history_context:
             full_input += f"Ecco il contesto delle conversazioni precedenti di oggi:\n\n{history_context}\n---\n"
 
-        full_input += f"\n\Oggi è {self._get_today_date_and_time_and_weekday()}\n\n"
+        full_input += f"\nOggi è {self._get_today_date_and_time_and_weekday()}\n\n"
         
         full_input += f"Utente: {input_text}"
 
@@ -98,7 +98,8 @@ class BaseAgent:
         llm = ChatAnthropic(
             model=ANTHROPIC_MODEL,
             anthropic_api_key=api_key,
-            temperature=0
+            temperature=0,
+            max_tokens=8192
         )
         
         self.tools = tools or []
