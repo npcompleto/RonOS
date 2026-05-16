@@ -31,8 +31,12 @@ python -m pip install --quiet -r requirements.txt
 
 # Funzione per pulire i processi all'uscita (CTRL+C)
 cleanup() {
-    echo -e "\n--- Spegnimento Ron OS in corso... ---"
+    echo -e "\n--- Spegnimento Ron OS e PWA in corso... ---"
     pkill -f "python ron.py" -9
+    if [ -n "$PWA_PID" ]; then
+        kill -9 $PWA_PID 2>/dev/null
+    fi
+    pkill -f "vite" -9
     echo "--- Sistemi spenti. ---"
     exit
 }
@@ -45,6 +49,12 @@ export DISPLAY=:0
 echo "--- Aggiornamento Database... ---"
 python db.py
 echo "--- Database aggiornato. ---"
+
+echo "--- Avvio PWA WebApp... ---"
+cd pwa
+npm run dev > /dev/null 2>&1 &
+PWA_PID=$!
+cd ..
 
 echo "--- Avvio Ron OS... ---"
 python ron.py "$1" "$2" "$3" "$4" "$5" "$6" &
