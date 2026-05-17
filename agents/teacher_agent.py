@@ -39,6 +39,7 @@ class TeacherAgent(BaseAgent):
                 " -question",
                 " -answer",
                 " -options",
+                "Importante: le options devono essere un array di stringhe",
                 "Usa SEMPRE il tool 'save_json_test' per salvare il file finale. Assicurati di compilare correttamente i campi 'file_path' e 'text' con l'intero JSON.",
                 "Quando hai finito dichiara di aver preparato la verifica e di averla salvata"
             ],
