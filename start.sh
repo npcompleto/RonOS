@@ -9,7 +9,11 @@ cd "$(dirname "$0")"
 ENV_NAME="ron311"
 
 #echo "--- Aggiornamento Ron OS ---"
-#git pull
+echo "--- Tentativo git pull ---"
+git pull >> git_debug.log 2>&1
+if [ $? -ne 0 ]; then
+    echo "Errore git! Verifica git_debug.log" | systemd-cat -p emerg
+fi
 #echo "--- Aggiornamento completato ---"
 
 # Inizializza conda nel contesto dello script
