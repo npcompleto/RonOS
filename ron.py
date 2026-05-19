@@ -5,6 +5,7 @@ from tts.tts_manager import TextToSpeechManager
 from display.robot_face import RobotFaceManager, Expression
 import utils
 import time
+import threading
 from agents.main_agent import MainAgent
 from integrations.telegram_bot import TelegramBot
 from integrations.rest_listener import RestListener
@@ -15,6 +16,13 @@ logger = config.logger
 robot_face = None
 assistant = None
 tts = None
+
+
+def status_monitor():
+    while True:
+        if utils.is_playing_music() and robot_face.get_expression()!=Expression.DANCING:
+            robot_face.set_expression(Expression.DANCING)
+        time.sleep(1)
 
 def on_transcription(text: str) -> None:
     """Callback invocata ad ogni trascrizione completata."""

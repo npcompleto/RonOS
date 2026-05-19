@@ -346,6 +346,10 @@ class RobotFaceManager:
         self._kwargs = kwargs
         self._parent_conn, self._child_conn = mp.Pipe()
         self._process = None
+        self._expression = Expression.NEUTRAL
+
+    def get_expression(self):
+        return self._expression
 
     def _target(self, conn, kwargs):
         face = RobotFace(**kwargs)
@@ -354,7 +358,9 @@ class RobotFaceManager:
             dt = face.clock.tick(face.fps) / 1000.0
             while conn.poll():
                 cmd, val = conn.recv()
-                if cmd == "EXPR": face.set_expression(val)
+                if cmd == "EXPR": 
+                    face.set_expression(val)
+                    self._expression = val
                 elif cmd == "SPEAK": face._speaking = val
                 elif cmd == "NOD": face.start_nod()
                 elif cmd == "TEXT": face.set_text(val)
