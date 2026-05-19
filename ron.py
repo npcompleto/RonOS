@@ -161,6 +161,8 @@ if __name__ == "__main__":
         robot_face = RobotFaceManager(fullscreen="--windowed" not in sys.argv, bg_color=(10, 10, 20))
         robot_face.start()
 
+    status_monitor_thread=threading.Thread(target=status_monitor, daemon=True)
+    status_monitor_thread.start()
 
     stt = SpeechToTextManager(
         config,
