@@ -5,7 +5,7 @@ from agents.music_agent import MusicAgent
 from agents.teacher_agent import TeacherAgent
 from langchain_core.tools import tool
 from tools.system import shutdown
-
+from tools.meteo_tool import get_meteo_domani
 
 interpreter = InterpreterAgent()
 @tool("interpreter", description="Correggi possibili errori dovuto al riconoscimento vocale")
@@ -59,9 +59,10 @@ class MainAgent(BaseAgent):
                 "Non utilizzare MAI emoji (es. NO a 🇯🇵, 😊, 🚀, ecc.).",
                 "Non utilizzare caratteri speciali di formattazione come asterischi per il grassetto (es. NO a **Giappone**), trattini o elenchi puntati grafici, a meno che non sia strettamente indispensabile per la chiarezza del testo.",
                 "Gli unici caratteri racchiusi tra parentesi quadre ammessi sono esclusivamente i tag delle espressioni (es. [[HAPPY]], [[THOUGHTFUL]], [[NEUTRAL]]). Il resto del testo deve essere puro testo lineare, pulito e facile da leggere o pronunciare.",
-                "Quando l'utente chiede di preparare verifiche o interrogazioni di matematica o scienze, usa il tool teacher_agent"
+                "Quando l'utente chiede di preparare verifiche o interrogazioni di matematica o scienze, usa il tool teacher_agent",
+                "Quando l'utente ti da la buonanotte, rispondi invocando il tool get_meteo_domani con la città di Bareggio, e spiegagli come sarà il meteo del giorno dopo. Chiudi il messaggio con [[SLEEPING]]" 
 
             ],
-            tools=[call_interpreter_agent, call_school_agent, call_music_agent, call_teacher_agent, shutdown],
+            tools=[call_interpreter_agent, call_school_agent, call_music_agent, call_teacher_agent, get_meteo_domani],
             enable_memory=True
         )

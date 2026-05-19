@@ -62,6 +62,8 @@ def on_expression(expression: str) -> None:
             expr = expr_map.get(expression.upper(), Expression.NEUTRAL)
             logger.info(f"Espressione: {expression} -> {expr}")
             robot_face.set_expression(expr)
+            if expression.upper() == "SLEEPING":
+                utils.shutdown()
     except Exception as e:
         logger.error(f"Errore durante il cambio espressione: {e}")
     
@@ -137,6 +139,7 @@ def process_telegram_message(user_message: str) -> str:
     if robot_face:
         robot_face.set_text("")
         robot_face.set_expression(Expression.NEUTRAL)
+        tts.speak(response.content)
     return response.content
     
 

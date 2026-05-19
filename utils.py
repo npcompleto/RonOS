@@ -102,3 +102,10 @@ def is_playing_music():
     if not pygame.mixer.get_init():
         return False
     return pygame.mixer.music.get_busy()
+
+def shutdown():
+    """
+    Spegne il sistema.
+    """
+    config.logger.info("Spegnimento Ron OS e PWA in corso...")
+    os.system("sudo shutdown now")
