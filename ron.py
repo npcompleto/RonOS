@@ -20,9 +20,18 @@ tts = None
 
 def status_monitor():
     while True:
-        if utils.is_playing_music() and robot_face.get_expression()!=Expression.DANCING:
-            robot_face.set_expression(Expression.DANCING)
-        time.sleep(1)
+        try:
+            if utils.is_playing_music() and robot_face.get_expression()!=Expression.DANCING:
+                if robot_face:
+                    robot_face.set_expression(Expression.DANCING)
+            
+            logger.info(f"Wi-Fi Link Quality: {utils.get_wifi_strength()}%")
+            if robot_face:
+                robot_face.set_wifi_level(utils.get_wifi_strength())
+            time.sleep(1)
+        except Exception as e:
+            logger.error(f"Errore nel monitoraggio dello stato: {e}")
+            time.sleep(5)  # Attende prima di riprovare in caso di errore
 
 def on_transcription(text: str) -> None:
     """Callback invocata ad ogni trascrizione completata."""

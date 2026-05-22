@@ -109,3 +109,20 @@ def shutdown():
     """
     config.logger.info("Spegnimento Ron OS e PWA in corso...")
     os.system("sudo shutdown now")
+
+def get_wifi_strength():
+    try:
+        with open("/proc/net/wireless", "r") as f:
+            lines = f.readlines()
+            
+        # The data starts on the 3rd line of the file
+        for line in lines[2:]:
+            details = line.split()
+            if len(details) > 2:
+                # Link quality is usually the 3rd column (index 2)
+                # It strips the trailing dot if present
+                link_quality = float(details[2].replace('.', ''))
+                return link_quality
+    except FileNotFoundError:
+        print("Could not read wireless stats. Are you on Linux/Raspberry Pi?")
+    return None

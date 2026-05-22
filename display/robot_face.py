@@ -8,6 +8,7 @@ from enum import Enum
 from typing import Tuple
 import threading
 from event_manager import EventManager
+
 # ====================================================================
 # DEFINIZIONI E LOGICA CORE (RobotFace)
 # ====================================================================
@@ -57,7 +58,7 @@ class RobotFace:
         # Font per il testo
         self._font = pygame.font.SysFont("Arial", int(self._ref * 0.06), bold=True)
         self._current_text = ""
-        self._wrapped_lines = [] # Memorizziamo le righe già calcolate
+        self._wrapped_lines = [] 
 
         # State & Animation
         self._expression = Expression.NEUTRAL
@@ -68,6 +69,9 @@ class RobotFace:
         self._next_blink = random.uniform(2.5, 5.5)
         self._speak_phase = 0.0
         self._spd = 5.0
+
+        # Livello Wi-Fi iniziale (da 0.0 a 1.0)
+        self._wifi_pct = 1.0 
 
         # Animazioni Speciali
         self._nod_timer = 0.0
@@ -91,25 +95,21 @@ class RobotFace:
         self._sync_instantly()
 
     def _wrap_text(self, text, max_width):
-        """Spezza il testo in righe se supera la larghezza massima in pixel."""
         words = text.split(' ')
         lines = []
         current_line = []
 
         for word in words:
-            # Prova ad aggiungere la parola alla riga corrente
             test_line = ' '.join(current_line + [word])
             w, _ = self._font.size(test_line)
             
             if w <= max_width:
                 current_line.append(word)
             else:
-                # Se la riga corrente ha già parole, chiudila e inizia una nuova
                 if current_line:
                     lines.append(' '.join(current_line))
                     current_line = [word]
                 else:
-                    # Se una singola parola è più lunga del limite, forzala (caso limite)
                     lines.append(word)
                     current_line = []
         
@@ -118,18 +118,22 @@ class RobotFace:
         return lines
 
     def set_text(self, text):
-        """Imposta il testo e calcola preventivamente il wrapping."""
         self._current_text = text if text else ""
         if not self._current_text:
             self._wrapped_lines = []
             return
 
         max_w_px = self.width * 0.8
-        # Gestisce sia i \n manuali che il wrapping automatico
         raw_lines = self._current_text.split('\n')
         self._wrapped_lines = []
         for rl in raw_lines:
             self._wrapped_lines.extend(self._wrap_text(rl, max_w_px))
+
+    def set_wifi_level(self, percentage: float):
+        """Imposta il livello del segnale wifi (0.0 a 1.0 o 0 a 100)."""
+        if percentage > 1.0:
+            percentage /= 100.0
+        self._wifi_pct = max(0.0, min(1.0, percentage))
 
     def _set_defaults(self):
         r = min(self.width, self.height)
@@ -215,7 +219,7 @@ class RobotFace:
 
         self._eye_offset_x, self._eye_offset_y = target_off_x, target_off_y
         
-        block_blink = [Expression.SLEEPING, Expression.IN_LOVE, Expression.LOADING, Expression.HAPPY,Expression.DOWNLOADING]
+        block_blink = [Expression.SLEEPING, Expression.IN_LOVE, Expression.LOADING, Expression.HAPPY, Expression.DOWNLOADING]
         if self._auto_blink and self._expression not in block_blink:
             self._blink_timer += dt
             if self._blink_timer >= self._next_blink:
@@ -227,8 +231,39 @@ class RobotFace:
 
         if self._speaking: self._speak_phase += dt * 12.0
 
+    def _draw_wifi(self):
+        """Disegna l'indicatore wifi a 6 barre in alto a destra."""
+        num_bars = 6
+        # Parametri proporzionali allo schermo
+        margin_right = int(self.width * 0.05)
+        margin_top = int(self.height * 0.03)
+        bar_w = max(4, int(self._ref * 0.015))
+        bar_gap = max(2, int(self._ref * 0.008))
+        max_bar_h = int(self._ref * 0.06)
+        
+        # Punto iniziale (destra verso sinistra)
+        start_x = self.width - margin_right - (num_bars * (bar_w + bar_gap))
+        
+        # Colore spento (sfondo oscurato)
+        bg_bar_color = (int(self.eye_color[0]*0.15), int(self.eye_color[1]*0.15), int(self.eye_color[2]*0.15))
+
+        # Determina quante barrette accendere in base alla percentuale
+        active_bars = round(self._wifi_pct * num_bars)
+
+        for i in range(num_bars):
+            # Le barre crescono linearmente in altezza
+            bar_h = int((i + 1) * (max_bar_h / num_bars))
+            x = start_x + i * (bar_w + bar_gap)
+            y = margin_top + (max_bar_h - bar_h)
+            
+            color = self.eye_color if i < active_bars else bg_bar_color
+            pygame.draw.rect(self.screen, color, (x, y, bar_w, bar_h), border_radius=int(bar_w // 2))
+
     def _draw(self):
         self.screen.fill(self.bg_color)
+        
+        # Indicatore Wi-Fi
+        self._draw_wifi()
         
         # 1. Disegno Volto
         cx = (self.width // 2) + int(self._eye_offset_x)
@@ -241,8 +276,6 @@ class RobotFace:
         if self._wrapped_lines:
             line_height = self._font.get_linesize()
             total_text_h = len(self._wrapped_lines) * line_height
-            # L'area del testo inizia circa all'80% dell'altezza, 
-            # ma se ci sono molte righe saliamo leggermente per non uscire dal fondo
             start_y = int(self.height * 0.85) - (total_text_h // 2)
             
             for i, line in enumerate(self._wrapped_lines):
@@ -270,32 +303,25 @@ class RobotFace:
             if self._expression == Expression.LOADING:
                 start = math.radians(self._loading_angle if side > 0 else -self._loading_angle)
                 pygame.draw.arc(arc_surf, color, rect, start, start + math.pi, 8)
-            else: # HAPPY
+            else: 
                 thick = max(10, int(self._ref * 0.035))
                 pygame.draw.arc(arc_surf, color, rect, 0, math.pi, thick)
             surf.blit(arc_surf, (0, 0))
         elif self._expression == Expression.IN_LOVE:
             self._draw_heart(surf, color, rect)
             
-        elif self._expression == Expression.DOWNLOADING: # <--- NUOVA LOGICA DI RENDERING
-            # Colore di sfondo dell'occhio "vuoto" (es. versione molto scura del colore originale)
+        elif self._expression == Expression.DOWNLOADING: 
             bg_eye_color = (int(color[0]*0.2), int(color[1]*0.2), int(color[2]*0.2))
-            # Colore di riempimento più chiaro (es. azzurro neon molto luminoso / bianco-azzurro)
             fill_color = (min(255, int(color[0] * 1.3 + 50)), min(255, int(color[1] * 1.3 + 50)), min(255, int(color[2] * 1.3 + 50)))
             
-            # 1. Disegna la sagoma di sfondo dell'occhio
             pygame.draw.rect(surf, bg_eye_color, rect, border_radius=int(self._eye_radius))
             
-            # 2. Crea una superficie speculare per la barra di avanzamento e applica il clip dal basso
             progress_surf = pygame.Surface((w * 2, h * 2), pygame.SRCALPHA)
             pygame.draw.rect(progress_surf, fill_color, rect, border_radius=int(self._eye_radius))
             
-            # Calcola l'altezza del riempimento in base al progresso corrente
             fill_h = int(h * self._download_progress)
-            # Il clip parte da (y + h - fill_h) perché l'origine di Pygame (0,0) è in alto a sinistra
             clip_rect = pygame.Rect(w // 2, (h // 2) + h - fill_h, w, fill_h)
             
-            # Blitta solo la porzione sbloccata dal clip_rect
             surf.blit(progress_surf, clip_rect, clip_rect)
             
         else:
@@ -364,6 +390,7 @@ class RobotFaceManager:
                 elif cmd == "SPEAK": face._speaking = val
                 elif cmd == "NOD": face.start_nod()
                 elif cmd == "TEXT": face.set_text(val)
+                elif cmd == "WIFI": face.set_wifi_level(val)  # <--- GESTIONE COMANDO WIFI
                 elif cmd == "STOP": running = False
             for ev in pygame.event.get():
                 if ev.type == pygame.QUIT: running = False
@@ -380,7 +407,6 @@ class RobotFaceManager:
             self._process = mp.Process(target=self._target, args=(self._child_conn, self._kwargs))
             self._process.daemon = True
             self._process.start()
-            
             
             def listen():
                 em = EventManager()
@@ -400,6 +426,7 @@ class RobotFaceManager:
     def set_expression(self, expr: Expression): self._parent_conn.send(("EXPR", expr))
     def set_speaking(self, status: bool): self._parent_conn.send(("SPEAK", status))
     def set_text(self, text: str): self._parent_conn.send(("TEXT", text))
+    def set_wifi_level(self, percentage: float): self._parent_conn.send(("WIFI", percentage)) # <--- NUOVO METODO MANAGER
     def nod(self): self._parent_conn.send(("NOD", None))
 
 if __name__ == "__main__":
@@ -407,13 +434,17 @@ if __name__ == "__main__":
     manager.start()
     try:
         manager.set_expression(Expression.HAPPY)
-        manager.set_text("Ciao! Sono pronto.\nCome posso aiutarti?")
+        manager.set_text("Segnale Ottimo!")
+        manager.set_wifi_level(1.0) # 100% (Accende tutte e 6 le barre)
         time.sleep(3)
-        manager.set_expression(Expression.LOADING)
-        manager.set_text("Sto pensando...")
+        
+        manager.set_expression(Expression.THOUGHTFUL)
+        manager.set_text("Segnale scarso...")
+        manager.set_wifi_level(0.30) # 30% (Accende circa 2 barre su 6)
         time.sleep(3)
-        manager.set_text("") # Nasconde il testo
-        manager.set_expression(Expression.NEUTRAL)
+        
+        manager.set_text("Nessun Segnale")
+        manager.set_wifi_level(0.0) # 0% (Tutto spento/scuro)
         time.sleep(2)
     except KeyboardInterrupt: pass
     finally: manager.stop()
