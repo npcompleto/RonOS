@@ -25,7 +25,7 @@ def status_monitor():
                 if robot_face:
                     robot_face.set_expression(Expression.DANCING)
             
-            logger.info(f"Wi-Fi Link Quality: {utils.get_wifi_strength()}%")
+            logger.debug(f"Wi-Fi Link Quality: {utils.get_wifi_strength()}%")
             if robot_face:
                 robot_face.set_wifi_level(utils.get_wifi_strength())
             time.sleep(1)
