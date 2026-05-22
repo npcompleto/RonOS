@@ -125,4 +125,4 @@ def get_wifi_strength():
                 return link_quality
     except FileNotFoundError:
         print("Could not read wireless stats. Are you on Linux/Raspberry Pi?")
-    return 0
+    return 0.0
