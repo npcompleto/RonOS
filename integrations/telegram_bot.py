@@ -87,4 +87,12 @@ class TelegramBot:
     def run(self):
         """Avvia il polling del bot"""
         print("Avvio del bot Telegram in corso... Premi Ctrl+C per fermarlo.")
-        self.app.run_polling()
+        self.app.run_polling(
+            poll_interval=1.0,      # Tempo di attesa tra una richiesta e l'altra (in secondi)
+            timeout=30,             # Timeout del Long Polling lato Telegram (default è 10)
+            read_timeout=60,        # Tempo massimo di attesa risposta della rete prima di un timeout locale
+            write_timeout=20,       # Timeout per l'invio dei dati
+            connect_timeout=20,     # Timeout per stabilire la connessione iniziale
+            bootstrap_retries=-1,   # Tenta all'infinito se fallisce l'avvio iniziale (-1)
+            close_loop=True
+        )
