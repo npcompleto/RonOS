@@ -3,8 +3,10 @@ import os
 
 DB_PATH = "ronos.db"
 
+
 def get_connection():
     return sqlite3.connect(DB_PATH)
+
 
 def init_db():
     conn = get_connection()
@@ -20,10 +22,12 @@ def init_db():
             UNIQUE(type, date, class)
         )
     ''')
+
+    # Create desired schema with `data` as DATE
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS school_ranks (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            data TEXT NOT NULL,
+            data DATE NOT NULL,
             materia TEXT NOT NULL,
             tipo TEXT,
             valutazione TEXT NOT NULL,
@@ -35,15 +39,16 @@ def init_db():
             UNIQUE(data, materia, tipo)
         )
     ''')
+    # Ensure quadrimestre column exists (idempotent)
     try:
         cursor.execute('ALTER TABLE school_ranks ADD COLUMN quadrimestre TEXT')
     except sqlite3.OperationalError:
-        # Colonna già esistente
         pass
-        
+
     conn.commit()
     conn.close()
     print(f"Database initialized at {DB_PATH}")
+
 
 if __name__ == "__main__":
     init_db()

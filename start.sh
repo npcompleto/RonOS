@@ -32,6 +32,7 @@ conda activate "$ENV_NAME"
 echo "--- Verifica dipendenze... ---"
 python -m pip install --quiet --upgrade pip setuptools wheel
 python -m pip install --quiet -r requirements.txt
+playwright install
 
 # Funzione per pulire i processi all'uscita (CTRL+C)
 cleanup() {

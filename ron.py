@@ -10,7 +10,8 @@ from agents.main_agent import MainAgent
 from integrations.telegram_bot import TelegramBot
 from integrations.rest_listener import RestListener
 from event_manager import EventManager
-
+from jobs import JobScheduler, JobScheduleError
+from tools.school_tool import axios_sync, axios_rank_sync
 logger = config.logger
 
 robot_face = None
@@ -169,12 +170,15 @@ if __name__ == "__main__":
     em.subscribe("message", message_handler)
     em.subscribe("joystick", joystick_handler)
     em.subscribe("downloading", downloading_handler)
+
     if "--no-face" not in sys.argv:
         robot_face = RobotFaceManager(fullscreen="--windowed" not in sys.argv, bg_color=(10, 10, 20))
         robot_face.start()
 
     status_monitor_thread=threading.Thread(target=status_monitor, daemon=True)
     status_monitor_thread.start()
+
+    scheduler = JobScheduler()
 
     stt = SpeechToTextManager(
         config,
@@ -207,9 +211,14 @@ if __name__ == "__main__":
         tts.speak("[[HAPPY]]Ciao, Bella Fra! [[NEUTRAL]]")
         #utils.play_audio(config.SOUNDS["startup"], 0.4)
         logger.info("Ron OS started")
+
         # Avvia il listener REST
         rest_listener = RestListener()
         rest_listener.start()
+
+        scheduler.add_job("axios_sync", axios_sync, interval="4h", run_immediately=True)
+        scheduler.add_job("axios_rank_sync", axios_rank_sync, interval="1h", run_immediately=True)
+        scheduler.start()
 
         if telegram_bot:
             telegram_bot.run()

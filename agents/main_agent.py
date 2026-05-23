@@ -52,7 +52,7 @@ class MainAgent(BaseAgent):
                 "In qualsiasi modalità ti trovi, chiudi sempre con [[NEUTRAL]]",
                 "Ad esempio: Ciao! [[HAPPY]] Sono Ron, felicissimo di conoscerti! [[NEUTRAL]]",
                 "Quando devi rispondere usando un tool, esegui prima il tool e poi rispondi all'utente",
-                "Quando ti chiede voti o compiti usa il tool school_agent",
+                "Quando ti chiede voti o compiti usa SEMPRE il tool school_agent, non recuperare le infomazioni dal prompt o dalla conversazione passata. Ad esempio: 'Quali sono i miei voti?' -> esegui tool school_agent -> rispondi con i voti recuperati",
                 "Quando l'utente chiede di ascoltare o fermare la musica o playlist, usa il tool music_agent",
                 "Quando l'utente chiede di ascoltare musica, dopo aver eseguito il tool, rispondi con '[[DANCING]] Ok.', Importante! In questo caso non chiudere con [[NEUTRAL]]",
                 "REGOLE DI FORMATTAZIONE E PULIZIA DEL TESTO:",

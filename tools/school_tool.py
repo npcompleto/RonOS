@@ -41,12 +41,26 @@ def add_school_event(event_type: str, date: str, school_class: str, description:
 def add_school_rank(data: str, materia: str, tipo: str, valutazione: str, obiettivi: str, osservazioni: str, docente: str, quadrimestre: str):
     """Aggiunge un nuovo voto al database."""
     try:
+        # Validate valutazione: must contain at least one digit
+        valutazione = valutazione.replace(",", ".").strip()  # Normalize decimal separator and trim
+        if not re.search(r"\d", str(valutazione)):
+            config.logger.info(f"Valutazione scartata per {materia}: '{valutazione}' (nessun numero)")
+            return f"Valutazione scartata per {materia}: formato non valido."
+
+        # Parse date from DD/MM/YYYY to YYYY-MM-DD (SQLite-friendly DATE)
+        try:
+            parsed = datetime.strptime(data.strip(), "%d/%m/%Y")
+            db_date = parsed.strftime("%Y-%m-%d")
+        except Exception as e:
+            config.logger.error(f"Formato data non valido per add_school_rank: {data} -> {e}")
+            return f"Formato data non valido. Usa DD/MM/YYYY. Errore: {e}"
+
         conn = get_connection()
         cursor = conn.cursor()
         cursor.execute('''
             INSERT OR IGNORE INTO school_ranks (data, materia, tipo, valutazione, obiettivi, osservazioni, docente, quadrimestre)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (data, materia, tipo, valutazione, obiettivi, osservazioni, docente, quadrimestre))
+        ''', (db_date, materia, tipo, valutazione, obiettivi, osservazioni, docente, quadrimestre))
         conn.commit()
         conn.close()
         return f"Voto salvato per {materia}: {valutazione}."
@@ -103,7 +117,7 @@ def axios_login(p, headless=True):
     """ Effettua il login al registro Axios """
     config.logger.info("Avvio login Axios...")
     em = EventManager()
-    em.publish("loading", {"started": True, "message": "Accesso al Registro in corso..."})
+    #em.publish("loading", {"started": True, "message": "Accesso al Registro in corso..."})
     customer_id = os.getenv("AXIOS_CUSTOMER_ID")
     username = os.getenv("AXIOS_USERNAME")
     password = os.getenv("AXIOS_PASSWORD")
@@ -115,7 +129,7 @@ def axios_login(p, headless=True):
     
     try:
         # Avvio browser - Headless True per l'esecuzione in background
-        browser = p.chromium.launch(headless=headless)
+        browser = p.chromium.launch(headless=True)
         context = browser.new_context()
         page = context.new_page()
         
@@ -165,7 +179,7 @@ def axios_sync(weeks_ahead: int = 3):
         registro_di_classe.click()
             
         extract_week_data(page)
-        em.publish("loading", {"started": True, "message": "Aggiorno gli impegni scolastici"})
+        #em.publish("loading", {"started": True, "message": "Aggiorno gli impegni scolastici"})
         if weeks_ahead >= 1:
             for i in range(weeks_ahead):
                 prev_fdDataValue = page.locator("#fdData").input_value()
@@ -199,7 +213,7 @@ def list_school_events(start_date: str = None, end_date: str = None):
     try:
         conn = get_connection()
         cursor = conn.cursor()
-        
+        """
         # Recuperiamo la data massima presente a DB per decidere se sincronizzare
         cursor.execute('SELECT DISTINCT date FROM school_events')
         all_dates = cursor.fetchall()
@@ -215,6 +229,7 @@ def list_school_events(start_date: str = None, end_date: str = None):
                 max_date_db = max(parsed_dates)
         
         # Decidiamo se serve sincronizzare
+       
         target_date_str = end_date or start_date
         should_sync = False
         
@@ -231,6 +246,7 @@ def list_school_events(start_date: str = None, end_date: str = None):
         if should_sync:
             config.logger.info(f"Sincronizzazione necessaria (Target: {target_date_str}, Max DB: {max_date_db.strftime('%d/%m/%Y') if max_date_db else 'Nessuna'})...")
             axios_sync()
+        """
         
         # Rieseguiamo la query per includere i nuovi dati
         cursor.execute('SELECT type, date, class, description FROM school_events ORDER BY date ASC')
@@ -271,7 +287,7 @@ def list_school_ranks():
     """Elenca i voti salvati"""
     
     try:
-        axios_rank_sync(headless=True)
+        #axios_rank_sync(headless=True)
         conn = get_connection()
         cursor = conn.cursor()
         cursor.execute('SELECT data, materia, tipo, valutazione, obiettivi, osservazioni, docente, quadrimestre FROM school_ranks ORDER BY data DESC')
@@ -283,7 +299,9 @@ def list_school_ranks():
         for row in rows:
             quad = f"[{row[7]}] " if row[7] else ""
             results.append(f"{quad}[{row[0].upper()}] {row[2]} ({row[1]}): {row[3]}")
-        return "\n".join(results)
+        response = "\n".join(results)
+        config.logger.info(response)
+        return response
     except Exception as e:
         return f"Errore durante la lettura: {e}"
     
