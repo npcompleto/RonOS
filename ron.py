@@ -13,6 +13,8 @@ from event_manager import EventManager
 from jobs import JobScheduler, JobScheduleError
 from tools.school_tool import axios_sync, axios_rank_sync
 from tools.meteo_tool import run_sync_weekly_meteo
+from status import get_global_status, State, StateMachine
+
 logger = config.logger
 
 robot_face = None
@@ -23,7 +25,8 @@ tts = None
 def status_monitor():
     while True:
         try:
-            if utils.is_playing_music() and robot_face.get_expression()!=Expression.DANCING:
+            if utils.is_playing_music() and get_global_status().get_state() != State.DANCING:
+                get_global_status().set_state(State.DANCING, reason="Musica in riproduzione")
                 if robot_face:
                     robot_face.set_expression(Expression.DANCING)
             
@@ -160,7 +163,12 @@ def process_telegram_message(user_message: str) -> str:
         robot_face.set_expression(Expression.NEUTRAL)
         tts.speak(response.content)
     return response.content
-    
+
+def status_handler(old_state: State, new_state: State, reason: str) -> None:
+    logger.info(f"Stato aggiornato: {old_state} -> {new_state} (Reason: {reason})")
+    if new_state == State.IDLE and robot_face:
+        robot_face.set_expression(Expression.NEUTRAL)
+        robot_face.set_text("")
 
 if __name__ == "__main__":
    
@@ -171,6 +179,8 @@ if __name__ == "__main__":
     em.subscribe("message", message_handler)
     em.subscribe("joystick", joystick_handler)
     em.subscribe("downloading", downloading_handler)
+
+    get_global_status().subscribe(status_handler)
 
     if "--no-face" not in sys.argv:
         robot_face = RobotFaceManager(fullscreen="--windowed" not in sys.argv, bg_color=(10, 10, 20))

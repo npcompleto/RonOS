@@ -21,6 +21,7 @@ from event_manager import EventManager
 
 import openwakeword
 from openwakeword.model import Model as OpenWakeWordModel
+from status import StateMachine, State, get_global_status
 
 logger = logging.getLogger(__name__)
 
@@ -223,25 +224,16 @@ class SpeechToTextManager:
 
             pcm16 = (np.clip(chunk_16k, -1.0, 1.0) * 32767).astype(np.int16)
 
-            # --- LOGICA DI FILTRO AUDIO IN USCITA (Robot che parla) ---
-            if utils.is_playing_music() or utils.is_robot_speaking():
-                if not stop_listening_logged: 
-                    logger.info("Audio is playing, skipping STT")
-                logger.debug("Audio is playing, skipping STT")
-                stop_listening_logged = True
+            
+            if get_global_status().get_state() != State.IDLE and get_global_status().get_state() != State.LISTENING:
+                logger.debug("Stato non IDLE or LISTENING, skipping STT")
                 self._flush_queue(self._raw_queue) # Svuota costantemente per non accumulare eco
+                accumulator = np.array([], dtype=np.float32)
+                oww_accumulator = np.array([], dtype=np.float32)
+                speech_buffer = [] # Reset fondamentale
                 continue
-            else:
-                if stop_listening_logged:
-                    time.sleep(0.7) # Silenzio post-parlato
-                    self._flush_queue(self._raw_queue)
-                    accumulator = np.array([], dtype=np.float32)
-                    oww_accumulator = np.array([], dtype=np.float32)
-                    speech_buffer = [] # Reset fondamentale
-                    stop_listening_logged = False
-                    logger.info("✨ Buffer resettati dopo parlato. Pronto.")
 
-            if not self._is_awake:
+            if get_global_status().get_state() == State.IDLE:
                 # --- WAKEWORD HANDLER: VOSK ---
                 if self._wakeword_handler == "vosk":
                     if self._wakeword_recognizer.AcceptWaveform(pcm16.tobytes()):
@@ -260,6 +252,7 @@ class SpeechToTextManager:
                             
                             if self._on_wake:
                                 self._on_wake(text)
+                            get_global_status().set_state(State.LISTENING, reason="Wake Word Rilevata")
                             continue
 
                 # --- WAKEWORD HANDLER: OPENWAKEWORD ---
@@ -294,6 +287,13 @@ class SpeechToTextManager:
                 continue # Torna a inizio loop per processare l'audio post-wake
 
             # --- LOGICA VAD (Solo se sveglio) ---
+            if get_global_status().get_state() != State.LISTENING:
+                logger.debug("Non dovrei essere qui!")
+                accumulator = np.array([], dtype=np.float32)
+                oww_accumulator = np.array([], dtype=np.float32)
+                speech_buffer = [] # Reset fondamentale
+                continue
+                
             accumulator = np.concatenate([accumulator, chunk_16k])
             while len(accumulator) >= self.VAD_FRAME_SAMPLES:
                 frame = accumulator[: self.VAD_FRAME_SAMPLES]
@@ -307,6 +307,7 @@ class SpeechToTextManager:
                 now = time.time()
                 
                 # --- Gestione accumulo frame ---
+                #FIXME: se is speech è false rimane in stato listening.
                 if is_speech:
                     if not self._is_speaking:
                         self._is_speaking = True
@@ -331,7 +332,7 @@ class SpeechToTextManager:
                         if duration >= self.MIN_SPEECH_DURATION_S:
                             motivo_chiusura = "Timeout Silenzio" if (now - last_voice_time > self._silence_timeout) else "Limite 5s"
                             logger.info(f"📤 Invio a Whisper: {duration:.2f}s ({motivo_chiusura})")
-                            
+                            get_global_status().set_state(State.TRANSCRIBING, reason="Segmento Completo Rilevato")
                             # Salva l'audio sovrascrivendo sempre lo stesso file
                             self._save_wav(full_audio, prefix="", override_filename="last_whisper.wav")
                             try:
@@ -358,8 +359,10 @@ class SpeechToTextManager:
                     logger.info(f"✅ Trascrizione: \"{text}\"")
                     if self._on_transcription:
                         self._on_transcription(text)
+                        get_global_status().set_state(State.THINKING, reason="Trascrizione completata")
                         self._is_awake = False 
                 else:
+                    get_global_status().set_state(State.IDLE, reason="Trascrizione ignorata")
                     logger.debug("Trascrizione ignorata (vuota o allucinazione).")
             except Exception as e:
                 logger.error(f"Errore Whisper: {e}")

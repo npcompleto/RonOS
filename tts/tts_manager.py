@@ -8,6 +8,7 @@ import config
 from utils import play_audio, stop_audio  # <-- Importiamo anche stop_audio
 import re
 import wave
+from status import get_global_status, State
 
 
 class TextToSpeechManager:
@@ -74,6 +75,7 @@ class TextToSpeechManager:
         if not sentences:
             return
 
+        get_global_status().set_state(State.SPEAKING, reason="Inizio sintesi vocale")
         config.logger.info(f"Ron dice: '{text}' (in {len(sentences)} pezzi)")
         
         # Reset del flag di interruzione all'inizio di ogni sessione di parlato
@@ -128,6 +130,7 @@ class TextToSpeechManager:
         except Exception as e:
             config.logger.error(f"Errore durante la sintesi vocale: {e}")
         finally:
+            get_global_status().set_state(State.IDLE, reason="Sintesi terminata")
             # Pulizia finale dello stato se interrotto
             if self._abort_speaking.is_set():
                 if self.stop_speaking_callback:
@@ -146,3 +149,4 @@ class TextToSpeechManager:
         
         # 2. Interrompe immediatamente l'audio a livello hardware tramite Pygame (Canale 0)
         stop_audio()
+        get_global_status().set_state(State.IDLE, reason="Interruzione parlato")

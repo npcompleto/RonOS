@@ -9,7 +9,7 @@ import difflib
 from config import logger, MUSIC_CACHE_DIR
 from langchain_core.tools import tool
 from event_manager import EventManager
-
+from status import get_global_status, State
 
 
 class MusicTool:
@@ -165,6 +165,7 @@ class MusicTool:
             
         self._playlist = []
         self._current_index = 0
+        get_global_status().set_state(State.IDLE, reason="Musica fermata")
         return "Musica e playlist fermate."
 
     def is_playing(self):
@@ -179,6 +180,7 @@ def play_music(query):
 @tool
 def stop_music():
     """Ferma la riproduzione musicale"""
+
     return _music_instance.stop()
 
 @tool
