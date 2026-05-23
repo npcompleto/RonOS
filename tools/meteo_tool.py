@@ -106,7 +106,7 @@ async def sync_meteo(days_from_today: int = 1, city: str = "Bareggio") -> str:
         csv = "hours,temp,precipitation\n"
         jsonObject = {}
         for entry in data:
-            config.logger.info(f"Elaborazione entry meteo: {entry}")
+            config.logger.debug(f"Elaborazione entry meteo: {entry}")
             try:                
                 jsonObject[entry['hours']] = {'temperature': entry['temp'], 'precipitation': entry['prec']}
                 if int(entry['hours']) == 24:
