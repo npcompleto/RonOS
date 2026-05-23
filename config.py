@@ -17,9 +17,8 @@ logging.basicConfig(
     ],
     force=True  # Obbliga l'uso di questa configurazione
 )
-DISABLED_LOGS = os.getenv("DISABLED_LOGS") or [""]
-for log_class in DISABLED_LOGS:
-    logging.getLogger(log_class).setLevel(logging.WARNING)
+
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 logger = logging.getLogger("config")
 

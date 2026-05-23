@@ -54,11 +54,11 @@ def get_meteo(date: str, city: str) -> str:
 # Trasformato in funzione asincrona
 async def sync_weekly_meteo(city: str = "Bareggio"):
     """Job settimanale per sincronizzare le previsioni meteo di domani"""
-    print("Esecuzione job settimanale: sync_weekly_meteo")
+    config.logger.info("Esecuzione job settimanale: sync_weekly_meteo")
     for i in range(7):
         # Aggiunto l'await per chiamare la funzione asincrona
         result = await sync_meteo(days_from_today=i, city=city)
-        print(f"Risultato sync_weekly_meteo {i}: {result}")
+        config.logger.debug(f"Risultato sync_weekly_meteo {i}: {result}")
 
 
 # Trasformato in funzione asincrona
@@ -74,7 +74,7 @@ async def sync_meteo(days_from_today: int = 1, city: str = "Bareggio") -> str:
             context = await browser.new_context()
             page = await context.new_page()
             
-            print(f"Navigazione su {url}...")
+            config.logger.debug(f"Navigazione su {url}...")
             await page.goto(url)
 
             # Gestione del click sul pulsante dei cookie con await
@@ -129,7 +129,7 @@ async def sync_meteo(days_from_today: int = 1, city: str = "Bareggio") -> str:
             )
             conn.commit()
             conn.close()
-            print(f"Meteo salvato per {city_norm} - {db_date}")
+            config.logger.debug(f"Meteo salvato per {city_norm} - {db_date}")
         except Exception as e:
             config.logger.error(f"Errore salvataggio meteo: {e}")
 
