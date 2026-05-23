@@ -45,6 +45,18 @@ def init_db():
     except sqlite3.OperationalError:
         pass
 
+    # Table for storing meteo forecasts (one row per date+city)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS meteo_forecast (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date DATE NOT NULL,
+            city TEXT NOT NULL,
+            dati_meteo TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(date, city)
+        )
+    ''')
+
     conn.commit()
     conn.close()
     print(f"Database initialized at {DB_PATH}")
