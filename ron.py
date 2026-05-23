@@ -158,10 +158,6 @@ def process_message(user_message: str) -> str:
 def process_telegram_message(user_message: str) -> str:
     logger.info(f"Messaggio ricevuto da Telegram: {user_message}")
     response = assistant.agent.run(user_message)
-    if robot_face:
-        robot_face.set_text("")
-        robot_face.set_expression(Expression.NEUTRAL)
-        tts.speak(response.content)
     return response.content
 
 def status_handler(old_state: State, new_state: State, reason: str) -> None:
