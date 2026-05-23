@@ -207,6 +207,7 @@ class SpeechToTextManager:
     def _vad_loop(self) -> None:
         speech_buffer: list[np.ndarray] = []
         last_voice_time: float = 0.0
+        speech_start_time: float = 0.0  # <--- AGGIUNTO per limite 5 secondi
         accumulator = np.array([], dtype=np.float32)
         oww_accumulator = np.array([], dtype=np.float32)
         stop_listening_logged = False
@@ -220,8 +221,6 @@ class SpeechToTextManager:
             chunk_16k = self._resample_chunk(chunk_raw)
             if len(chunk_16k) == 0: continue
 
-            # --- FIX ECCEZIONE: Definiamo pcm16 subito dopo il resampling ---
-            # Questo garantisce che pcm16 esista per qualsiasi handler (Vosk, OWW, VAD)
             pcm16 = (np.clip(chunk_16k, -1.0, 1.0) * 32767).astype(np.int16)
 
             # --- LOGICA DI FILTRO AUDIO IN USCITA (Robot che parla) ---
@@ -306,23 +305,33 @@ class SpeechToTextManager:
                 except: continue
 
                 now = time.time()
+                
+                # --- Gestione accumulo frame ---
                 if is_speech:
                     if not self._is_speaking:
                         self._is_speaking = True
                         speech_buffer = []
+                        speech_start_time = now # <--- Salvataggio tempo inizio
                         logger.info("🎙️ Inizio rilevamento parlato...")
                     speech_buffer.append(frame)
                     last_voice_time = now
                 elif self._is_speaking:
                     speech_buffer.append(frame)
-                    # Se superiamo il timeout di silenzio, chiudiamo il segmento
-                    if now - last_voice_time > self._silence_timeout:
+                else:
+                    logger.debug("No speech detected")
+
+                # --- Controllo chiusura segmento ---
+                if self._is_speaking:
+                    # Se superiamo il timeout di silenzio OPPURE il limite massimo di 5 secondi
+                    if (now - last_voice_time > self._silence_timeout) or (now - speech_start_time > 5.0):
                         self._is_speaking = False
                         full_audio = np.concatenate(speech_buffer)
                         duration = len(full_audio) / self.TARGET_SAMPLE_RATE
 
                         if duration >= self.MIN_SPEECH_DURATION_S:
-                            logger.info(f"📤 Invio a Whisper: {duration:.2f}s")
+                            motivo_chiusura = "Timeout Silenzio" if (now - last_voice_time > self._silence_timeout) else "Limite 5s"
+                            logger.info(f"📤 Invio a Whisper: {duration:.2f}s ({motivo_chiusura})")
+                            
                             # Salva l'audio sovrascrivendo sempre lo stesso file
                             self._save_wav(full_audio, prefix="", override_filename="last_whisper.wav")
                             try:
@@ -331,8 +340,6 @@ class SpeechToTextManager:
                                 logger.warning("Coda trascrizioni piena.")
                         
                         speech_buffer = [] # Reset per il prossimo comando
-                else:
-                    logger.debug("No speech detected")
 
     def _transcription_worker(self) -> None:
         while self._running.is_set():

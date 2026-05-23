@@ -12,7 +12,7 @@ from integrations.rest_listener import RestListener
 from event_manager import EventManager
 from jobs import JobScheduler, JobScheduleError
 from tools.school_tool import axios_sync, axios_rank_sync
-from tools.meteo_tool import sync_weekly_meteo,sync_meteo
+from tools.meteo_tool import run_sync_weekly_meteo
 logger = config.logger
 
 robot_face = None
@@ -219,7 +219,7 @@ if __name__ == "__main__":
 
         scheduler.add_job("axios_sync", axios_sync, interval="4h", run_immediately=True)
         scheduler.add_job("axios_rank_sync", axios_rank_sync, interval="1h", run_immediately=True)
-        scheduler.add_job("sync_weekly_meteo", sync_weekly_meteo, interval="1d", run_immediately=True)
+        scheduler.add_job("sync_weekly_meteo", run_sync_weekly_meteo, interval="1d", run_immediately=True)
         scheduler.start()
 
         if telegram_bot:

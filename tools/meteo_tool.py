@@ -1,17 +1,19 @@
+import asyncio
 from langchain_core.tools import tool
 import config
 import requests
 from dotenv import load_dotenv
-from playwright.sync_api import sync_playwright, expect
+from playwright.async_api import async_playwright, expect  # Cambiato in async_playwright
 from datetime import datetime, timedelta
 from db import get_connection, init_db
+import json
 
 load_dotenv()
 init_db()
 
 
 @tool
-def get_meteo_domani(date: str, city: str) -> str:
+def get_meteo(date: str, city: str) -> str:
     """Restituisce il CSV meteo salvato nel DB per la data (DD/MM/YYYY o YYYY-MM-DD) e la città.
 
     Parametri:
@@ -48,79 +50,99 @@ def get_meteo_domani(date: str, city: str) -> str:
     except Exception as e:
         return f"Errore durante l'accesso al DB per meteo: {e}"
 
-def sync_weekly_meteo(city: str = "Bareggio"):
-    """Job settimanale per sincronizzare le previsioni meteo di domani"""
-    config.logger.info("Esecuzione job settimanale: sync_weekly_meteo")
-    for i in range(7):
-        result = sync_meteo(days_from_today=i, city=city)
-        config.logger.info(f"Risultato sync_weekly_meteo {i}: {result}")
 
-def sync_meteo(days_from_today: int = 1, city: str = "Bareggio") -> str:
+# Trasformato in funzione asincrona
+async def sync_weekly_meteo(city: str = "Bareggio"):
+    """Job settimanale per sincronizzare le previsioni meteo di domani"""
+    print("Esecuzione job settimanale: sync_weekly_meteo")
+    for i in range(7):
+        # Aggiunto l'await per chiamare la funzione asincrona
+        result = await sync_meteo(days_from_today=i, city=city)
+        print(f"Risultato sync_weekly_meteo {i}: {result}")
+
+
+# Trasformato in funzione asincrona
+async def sync_meteo(days_from_today: int = 1, city: str = "Bareggio") -> str:
     """Ottiene le previsioni meteo per una città data"""
 
     url = f"https://www.ilmeteo.it/meteo/{city.lower()}/{days_from_today}"
     
     try:
-        # Avvio browser - Headless True per l'esecuzione in background
-        p = sync_playwright().start()
-        browser = p.chromium.launch(headless=True)
-        context = browser.new_context()
-        page = context.new_page()
-        
-        config.logger.info(f"Navigazione su {url}...")
-        page.goto(url)
+        # Usiamo il context manager asincrono (pulisce automaticamente i processi alla fine)
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=True)
+            context = await browser.new_context()
+            page = await context.new_page()
+            
+            print(f"Navigazione su {url}...")
+            await page.goto(url)
 
-        page.get_by_role("button", name="accetta", exact=True).click()
+            # Gestione del click sul pulsante dei cookie con await
+            try:
+                # Messo in un try-except nel caso in cui il banner non appaia nelle chiamate successive
+                await page.get_by_role("button", name="accetta", exact=True).click(timeout=5000)
+            except Exception:
+                pass
 
-        page.wait_for_selector("table.weather_table")
+            await page.wait_for_selector("table.weather_table")
 
-        table = page.locator("table.weather_table")
-        
-        # Estraiamo i dati in modo atomico usando evaluate
-        # Questo evita problemi di timeout sui singoli elementi
-        data = page.evaluate("""() => {
-            const rows = Array.from(document.querySelectorAll('table.weather_table tr'));
-            return rows.slice(1).map(row => {
-                const cells = row.querySelectorAll('td');
-                if (cells.length < 4) return null;
-                return {
-                    hours: cells[0].innerText.trim(),
-                    temp: cells[2].innerText.trim(),
-                    prec: cells[3].innerText.trim()
-                };
-            }).filter(item => item !== null);
-        }""")
-        
-        browser.close()
+            # Estraiamo i dati in modo atomico usando evaluate (con await)
+            data = await page.evaluate("""() => {
+                const rows = Array.from(document.querySelectorAll('table.weather_table tr'));
+                return rows.slice(1).map(row => {
+                    const cells = row.querySelectorAll('td');
+                    if (cells.length < 4) return null;
+                    return {
+                        hours: cells[0].innerText.trim(),
+                        temp: cells[2].innerText.trim(),
+                        prec: cells[3].innerText.trim()  // Notare la chiave 'prec'
+                    };
+                }).filter(item => item !== null);
+            }""")
+            
+            await browser.close()
 
         # Formattazione output
         csv = "hours,temp,precipitation\n"
+        jsonObject = {}
         for entry in data:
-            
-            try:
-                csv += f"{entry['hours']},{entry['temp']},{entry['precip']}\n"
+            config.logger.info(f"Elaborazione entry meteo: {entry}")
+            try:                
+                jsonObject[entry['hours']] = {'temperature': entry['temp'], 'precipitation': entry['prec']}
                 if int(entry['hours']) == 24:
                     break
-            except Exception:
-                # ignore non-numeric hour fields
-                pass
+            except Exception as e:
+                # Ignora i campi ora non numerici
+                config.logger.error(f"Errore durante l'elaborazione dei dati meteo: {e}")
 
-        # Persist the CSV into the database with date (tomorrow) and city as unique key
+        # Persistenza dei dati nel database
         try:
-            db_date = (datetime.today() + timedelta(days=1)).strftime("%Y-%m-%d")
+            # Corretto: calcola la data corretta in base a 'days_from_today' invece di fare sempre +1 giorno
+            db_date = (datetime.today() + timedelta(days=days_from_today)).strftime("%Y-%m-%d")
             city_norm = city.strip().lower()
+            
             conn = get_connection()
             cursor = conn.cursor()
             cursor.execute(
                 "INSERT OR REPLACE INTO meteo_forecast (date, city, dati_meteo) VALUES (?, ?, ?)",
-                (db_date, city_norm, csv)
+                (db_date, city_norm, json.dumps(jsonObject))
             )
             conn.commit()
             conn.close()
-            config.logger.info(f"Meteo salvato per {city_norm} - {db_date}")
+            print(f"Meteo salvato per {city_norm} - {db_date}")
         except Exception as e:
             config.logger.error(f"Errore salvataggio meteo: {e}")
 
-        return f"Meteo per {days_from_today} giorni da oggi per {city.capitalize()}:\n{csv}"
+        return f"Meteo per {days_from_today} giorni da oggi per {city.capitalize()}:\n{json.dumps(jsonObject)}"
+        
     except Exception as e:
         return f"Non sono riuscito a trovare le previsioni meteo per {city.capitalize()} {e}"
+
+def run_sync_weekly_meteo(city: str = "Bareggio"):
+    try:
+        # Se c'è già un loop attivo in questo thread, usiamo quello
+        loop = asyncio.get_running_loop()
+        loop.create_task(sync_weekly_meteo(city))
+    except RuntimeError:
+        # Altrimenti ne avviamo uno nuovo (caso tipico di un thread dedicato)
+        asyncio.run(sync_weekly_meteo(city))

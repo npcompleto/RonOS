@@ -5,7 +5,7 @@ from agents.music_agent import MusicAgent
 from agents.teacher_agent import TeacherAgent
 from langchain_core.tools import tool
 from tools.system import shutdown
-from tools.meteo_tool import get_meteo_domani
+from tools.meteo_tool import get_meteo
 
 interpreter = InterpreterAgent()
 @tool("interpreter", description="Correggi possibili errori dovuto al riconoscimento vocale")
@@ -60,9 +60,11 @@ class MainAgent(BaseAgent):
                 "Non utilizzare caratteri speciali di formattazione come asterischi per il grassetto (es. NO a **Giappone**), trattini o elenchi puntati grafici, a meno che non sia strettamente indispensabile per la chiarezza del testo.",
                 "Gli unici caratteri racchiusi tra parentesi quadre ammessi sono esclusivamente i tag delle espressioni (es. [[HAPPY]], [[THOUGHTFUL]], [[NEUTRAL]]). Il resto del testo deve essere puro testo lineare, pulito e facile da leggere o pronunciare.",
                 "Quando l'utente chiede di preparare verifiche o interrogazioni di matematica o scienze, usa il tool teacher_agent",
-                "Quando l'utente ti da la buonanotte, rispondi invocando il tool get_meteo_domani con la città di Bareggio, e spiegagli come sarà il meteo del giorno dopo. Chiudi il messaggio con [[SLEEPING]]" 
+                "Quando l'utente ti da la buonanotte, rispondi invocando il tool get_meteo con la città di Bareggio per l'indomani, e spiegagli come sarà il meteo del giorno dopo. Chiudi il messaggio con [[SLEEPING]]" 
+                "Quando l'utente ti chiede 'com'è il meteo domani?' o 'che tempo farà domani?' o 'mi serve un ombrello domani?' o frasi simili, rispondi invocando il tool get_meteo con la città di Bareggio per l'indomani, e spiegagli come sarà il meteo del giorno dopo. Chiudi il messaggio con [[NEUTRAL]]"
+                "Quando l'utente ti chiede 'com'è il meteo oggi?' o 'che tempo farà oggi?' o 'mi serve un ombrello oggi?' o frasi simili, rispondi invocando il tool get_meteo con la città di Bareggio per oggi, e spiegagli come sarà il meteo del giorno dopo. Chiudi il messaggio con [[NEUTRAL]]"
 
             ],
-            tools=[call_interpreter_agent, call_school_agent, call_music_agent, call_teacher_agent, get_meteo_domani],
+            tools=[call_interpreter_agent, call_school_agent, call_music_agent, call_teacher_agent, get_meteo],
             enable_memory=True
         )

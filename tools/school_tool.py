@@ -44,7 +44,7 @@ def add_school_rank(data: str, materia: str, tipo: str, valutazione: str, obiett
         # Validate valutazione: must contain at least one digit
         valutazione = valutazione.replace(",", ".").strip()  # Normalize decimal separator and trim
         if not re.search(r"\d", str(valutazione)):
-            config.logger.info(f"Valutazione scartata per {materia}: '{valutazione}' (nessun numero)")
+            config.logger.debug(f"Valutazione scartata per {materia}: '{valutazione}' (nessun numero)")
             return f"Valutazione scartata per {materia}: formato non valido."
 
         # Parse date from DD/MM/YYYY to YYYY-MM-DD (SQLite-friendly DATE)
@@ -73,7 +73,7 @@ def extract_week_data(page):
     # Iterazione sulle righe della tabella
     trs = table.locator("tr")
     rows_count = trs.count()
-    config.logger.info(f"Righe totali nella tabella: {rows_count}")
+    config.logger.debug(f"Righe totali nella tabella: {rows_count}")
             
     for i in range(rows_count):
         row = trs.nth(i)
@@ -96,7 +96,7 @@ def extract_week_data(page):
                         compito = ":".join(row_data[1:]).strip()
                         if compito and not compito.endswith('.'):
                             compito += '.'
-                        print("compito", data_val, materia, compito)
+                        #print("compito", data_val, materia, compito)
                         add_school_event("compito", data_val, materia, compito)
                         
             if verifiche_val:
@@ -110,12 +110,12 @@ def extract_week_data(page):
                         verifica = ":".join(row_data[1:]).strip()
                         if verifica and not verifica.endswith('.'):
                             verifica += '.'
-                        print("verifica", data_val, materia, verifica)
+                        #print("verifica", data_val, materia, verifica)
                         add_school_event("verifica", data_val, materia, verifica)
 
 def axios_login(p, headless=True):
     """ Effettua il login al registro Axios """
-    config.logger.info("Avvio login Axios...")
+    config.logger.debug("Avvio login Axios...")
     em = EventManager()
     #em.publish("loading", {"started": True, "message": "Accesso al Registro in corso..."})
     customer_id = os.getenv("AXIOS_CUSTOMER_ID")
@@ -133,18 +133,18 @@ def axios_login(p, headless=True):
         context = browser.new_context()
         page = context.new_page()
         
-        config.logger.info(f"Navigazione su {url}...")
+        config.logger.debug(f"Navigazione su {url}...")
         page.goto(url)
         
         # Inserimento credenziali basato sui nomi degli input forniti
-        config.logger.info("Inserimento credenziali...")
+        config.logger.debug("Inserimento credenziali...")
         page.fill('input[name="customerid"]', customer_id)
         page.fill('input[name="username"]', username)
         page.fill('input[name="password"]', password)
         
         # Click sul pulsante di login
         # L'utente specifica un pulsante di tipo submit con testo "Accedi con Axios "
-        config.logger.info("Esecuzione login...")
+        config.logger.debug("Esecuzione login...")
         # Usiamo un selettore che cerchi l'attribulo value o il testo
         login_button = page.locator('input[type="submit"], button[type="submit"]').filter(has_text="Accedi con Axios")
         if login_button.count() == 0:
@@ -154,10 +154,10 @@ def axios_login(p, headless=True):
         login_button.click()
         
         # Attesa del caricamento della timeline
-        config.logger.info("Accesso in corso... attesa del contenuto timeline...")
+        config.logger.debug("Accesso in corso... attesa del contenuto timeline...")
         page.wait_for_selector("#content-timeline", timeout=30000)
         
-        config.logger.info("Login completato con successo.")
+        config.logger.debug("Login completato con successo.")
         return page, browser
     except Exception as e:
         config.logger.error(f"Si è verificato un errore durante il login su Axios: {str(e)}")
@@ -166,7 +166,7 @@ def axios_login(p, headless=True):
 
 def axios_sync(weeks_ahead: int = 3):
     """ aggiorna i compiti e le verifiche dal registro Axios per il numero di settimane specificato , se non viene specificato il numero di settimane viene aggiornato per 3 settimane in avanti"""
-    config.logger.info("Avvio sincronizzazione Axios...")
+    config.logger.debug("Avvio sincronizzazione Axios...")
     em = EventManager()
     
     try:
@@ -209,7 +209,7 @@ def list_school_events(start_date: str = None, end_date: str = None):
     - start_date: opzionale, data di inizio o data singola (es. '19/04/2026').
     - end_date: opzionale, data di fine intervallo (es. '25/04/2026').
     """
-    config.logger.info("Controllo la lista eventi su axios")
+    config.logger.debug("Controllo la lista eventi su axios")
     try:
         conn = get_connection()
         cursor = conn.cursor()
@@ -244,7 +244,7 @@ def list_school_events(start_date: str = None, end_date: str = None):
                 pass # Formato non valido, ignoriamo sync
         
         if should_sync:
-            config.logger.info(f"Sincronizzazione necessaria (Target: {target_date_str}, Max DB: {max_date_db.strftime('%d/%m/%Y') if max_date_db else 'Nessuna'})...")
+            config.logger.debug(f"Sincronizzazione necessaria (Target: {target_date_str}, Max DB: {max_date_db.strftime('%d/%m/%Y') if max_date_db else 'Nessuna'})...")
             axios_sync()
         """
         
@@ -300,7 +300,7 @@ def list_school_ranks():
             quad = f"[{row[7]}] " if row[7] else ""
             results.append(f"{quad}[{row[0].upper()}] {row[2]} ({row[1]}): {row[3]}")
         response = "\n".join(results)
-        config.logger.info(response)
+        config.logger.debug(response)
         return response
     except Exception as e:
         return f"Errore durante la lettura: {e}"
@@ -308,7 +308,7 @@ def list_school_ranks():
 
 def axios_rank_sync(headless: bool = True):
     """aggiorna i voti dal registro Axios """
-    config.logger.info("Avvio sincronizzazione voti Axios...")
+    config.logger.debug("Avvio sincronizzazione voti Axios...")
     p = sync_playwright().start()
     page, browser = axios_login(p, headless=headless)
     registro_di_classe = page.locator('h4').filter(has_text="Voti")
@@ -318,13 +318,13 @@ def axios_rank_sync(headless: bool = True):
         tableVotiLengthSelect = page.locator("select[name='table-voti_length']")
         tableVotiLengthSelect.click()
         tableVotiLengthSelect.select_option("Tutti")
-        config.logger.info(f"Trovate {tableVotiLengthSelect.locator('option').count()} opzioni.")
+        config.logger.debug(f"Trovate {tableVotiLengthSelect.locator('option').count()} opzioni.")
         tableVotiLengthSelect.dispatch_event("change")
-        config.logger.info(f"Selezionato: {tableVotiLengthSelect.input_value()}")
+        config.logger.debug(f"Selezionato: {tableVotiLengthSelect.input_value()}")
         page.wait_for_timeout(2000)
         rows = page.locator("#table-voti tbody tr")
         count = rows.count()
-        config.logger.info(f"Trovate {count} valutazioni.")
+        config.logger.debug(f"Trovate {count} valutazioni.")
         
         for i in range(count):
             row = rows.nth(i)
@@ -340,19 +340,19 @@ def axios_rank_sync(headless: bool = True):
             osservazioni = cells.nth(5).inner_text()
             docente     = cells.nth(6).inner_text()
 
-            config.logger.info(f"Data: {data} | Materia: {materia} | Voto: {valutazione} | Quad: {quadrimestre}")
+            config.logger.debug(f"Data: {data} | Materia: {materia} | Voto: {valutazione} | Quad: {quadrimestre}")
             add_school_rank(data, materia, tipo, valutazione, obiettivi, osservazioni, docente, quadrimestre)
     page.locator("#s2id_fiFrazId").click()
     frazioneTemporaleElements = page.locator("#select2-results-2 li")
     quad1 = frazioneTemporaleElements.nth(0).inner_text().split(" (")[0]
-    config.logger.info(quad1)
+    config.logger.debug(quad1)
     frazioneTemporaleElements.nth(0).click()
     extract_ranks(quad1)
     page.locator("#s2id_fiFrazId").click()
     frazioneTemporaleElements = page.locator("#select2-results-6 li")
-    config.logger.info(frazioneTemporaleElements.count())
+    config.logger.debug(frazioneTemporaleElements.count())
     quad2 = frazioneTemporaleElements.nth(1).inner_text().split(" (")[0]
-    config.logger.info(quad2)
+    config.logger.debug(quad2)
     frazioneTemporaleElements.nth(1).click()
     extract_ranks(quad2)
     
