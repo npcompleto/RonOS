@@ -40,6 +40,10 @@ def status_monitor():
             logger.debug(f"Wi-Fi Link Quality: {utils.get_wifi_strength()}%")
             if robot_face:
                 robot_face.set_wifi_level(utils.get_wifi_strength())
+
+            logger.info(f"CPU Temperature: {utils.get_cpu_temp()}°C")
+            if robot_face:
+                robot_face.set_cpu_temp(utils.get_cpu_temp())
             time.sleep(1)
         except Exception as e:
             logger.error(f"Errore nel monitoraggio dello stato: {e}")

@@ -21,3 +21,4 @@ yt_dlp
 openwakeword
 uvicorn
 fastapi
+psutil

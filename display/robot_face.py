@@ -47,20 +47,18 @@ class RobotFace:
         self.clock = pygame.time.Clock()
         self._ref = min(self.width, self.height)
 
-        # Asset Cuore
+        # Asset e Font
         self.heart_path = os.path.join("display", "assets", "heart.svg")
         self.heart_original = None
         if os.path.exists(self.heart_path):
-            try:
-                self.heart_original = pygame.image.load(self.heart_path).convert_alpha()
+            try: self.heart_original = pygame.image.load(self.heart_path).convert_alpha()
             except: pass
 
-        # Font per il testo
         self._font = pygame.font.SysFont("Arial", int(self._ref * 0.06), bold=True)
         self._current_text = ""
         self._wrapped_lines = [] 
 
-        # State & Animation
+        # Stato
         self._expression = Expression.NEUTRAL
         self._auto_blink = auto_blink
         self._speaking = False
@@ -69,11 +67,11 @@ class RobotFace:
         self._next_blink = random.uniform(2.5, 5.5)
         self._speak_phase = 0.0
         self._spd = 5.0
-
-        # Livello Wi-Fi iniziale (da 0.0 a 1.0)
+        
         self._wifi_pct = 1.0 
+        self._cpu_temp = 0.0 # Temperatura CPU
 
-        # Animazioni Speciali
+        # Animazioni
         self._nod_timer = 0.0
         self._nod_active = False
         self._eye_offset_x = 0.0
@@ -83,12 +81,6 @@ class RobotFace:
         self.dance_rhythm = 6.0
         self._dance_timer = 0.0
 
-        # Parametri correnti e target
-        self._eye_w = self._eye_h = self._eye_rot_l = self._eye_rot_r = 0.0
-        self._eye_spacing = 0.40 * self._ref
-        self._eye_y = self._eye_radius = 0.0
-        self._mouth_w = self._mouth_h = self._mouth_y = self._mouth_curve = self._mouth_open = 0.0
-        
         self._t = {}
         self._set_defaults()
         self._update_targets()
@@ -231,6 +223,17 @@ class RobotFace:
 
         if self._speaking: self._speak_phase += dt * 12.0
 
+    def _draw_temp(self):
+            margin = int(self.width * 0.05)
+            bar_w, bar_h = max(6, int(self._ref * 0.025)), int(self._ref * 0.12)
+            x, y = margin, int(self.height * 0.03)
+            pygame.draw.rect(self.screen, (60, 60, 80), (x, y, bar_w, bar_h), 2, border_radius=5)
+            temp_pct = max(0.0, min(1.0, self._cpu_temp / 90.0))
+            fill_h = int(bar_h * temp_pct)
+            fill_color = (int(100 + 155 * temp_pct), 100, int(255 - 155 * temp_pct))
+            if fill_h > 0:
+                pygame.draw.rect(self.screen, fill_color, (x + 2, y + bar_h - fill_h - 2, bar_w - 4, fill_h - 2), border_radius=3)
+
     def _draw_wifi(self):
         """Disegna l'indicatore wifi a 6 barre in alto a destra."""
         num_bars = 6
@@ -264,6 +267,7 @@ class RobotFace:
         
         # Indicatore Wi-Fi
         self._draw_wifi()
+        self._draw_temp()
         
         # 1. Disegno Volto
         cx = (self.width // 2) + int(self._eye_offset_x)
@@ -391,6 +395,7 @@ class RobotFaceManager:
                 elif cmd == "NOD": face.start_nod()
                 elif cmd == "TEXT": face.set_text(val)
                 elif cmd == "WIFI": face.set_wifi_level(val)  # <--- GESTIONE COMANDO WIFI
+                elif cmd == "TEMP": face._cpu_temp = val
                 elif cmd == "STOP": running = False
             for ev in pygame.event.get():
                 if ev.type == pygame.QUIT: running = False
@@ -427,6 +432,7 @@ class RobotFaceManager:
     def set_speaking(self, status: bool): self._parent_conn.send(("SPEAK", status))
     def set_text(self, text: str): self._parent_conn.send(("TEXT", text))
     def set_wifi_level(self, percentage: float): self._parent_conn.send(("WIFI", percentage)) # <--- NUOVO METODO MANAGER
+    def set_cpu_temp(self, t): self._parent_conn.send(("TEMP", t))
     def nod(self): self._parent_conn.send(("NOD", None))
 
 if __name__ == "__main__":

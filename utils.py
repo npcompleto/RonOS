@@ -2,7 +2,7 @@ import pygame
 import os
 import config
 import time
-
+import psutil
 # Canale dedicato per la riproduzione della voce/risposte del robot
 # Inizializzato a None, verrà assegnato dopo il mixer.init()
 _voice_channel = None
@@ -126,3 +126,21 @@ def get_wifi_strength():
     except FileNotFoundError:
         print("Could not read wireless stats. Are you on Linux/Raspberry Pi?")
     return 0.0
+
+
+
+def get_cpu_temp():
+    # Verifica se il sistema espone i sensori di temperatura
+    if hasattr(psutil, "sensors_temperatures"):
+        temps = psutil.sensors_temperatures()
+        
+        # 'coretemp' è comune su Linux/Intel, ma può variare
+        if not temps:
+            return None
+            
+        # Alcuni sistemi hanno più sensori (package, core, ecc.)
+        # Qui prendiamo il primo sensore disponibile
+        for name, entries in temps.items():
+            for entry in entries:
+                return entry.current
+    return None
