@@ -41,7 +41,7 @@ def status_monitor():
             if robot_face:
                 robot_face.set_wifi_level(utils.get_wifi_strength())
 
-            logger.info(f"CPU Temperature: {utils.get_cpu_temp()}°C")
+            logger.debug(f"CPU Temperature: {utils.get_cpu_temp()}°C")
             if robot_face:
                 robot_face.set_cpu_temp(utils.get_cpu_temp())
             time.sleep(1)
@@ -147,6 +147,8 @@ def joystick_handler(data: dict) -> None:
     if data["action"]=='click':
         if utils.is_playing_music():
             stop_music_external()
+        
+        if get_global_status().get_state() == State.DANCING:
             get_global_status().set_state(State.IDLE, reason="Musica fermata da Joystick")
         tts.stop_speaking()
             
