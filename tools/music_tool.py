@@ -24,6 +24,7 @@ class MusicTool:
         self._current_index = 0
         self._stop_event = False
         self._playlist_thread = None
+        self._currently_playing = None
 
     def get_cached_songs(self):
         """Restituisce la lista dei file MP3 in cache."""
@@ -55,10 +56,15 @@ class MusicTool:
             filepath = os.path.join(self.download_path, filename)
             pygame.mixer.music.load(filepath)
             em = EventManager()
-            em.publish("music", {"message": filename, "started": True})
-            pygame.mixer.music.play()
-            logger.info(f"In riproduzione dalla cache: {filename}")
-            return filename
+            if get_global_status().set_state(State.DANCING, reason="Riproduzione musicale (_play_current_file)"):
+                em.publish("music", {"message": filename, "started": True})
+                self._currently_playing = filename
+                pygame.mixer.music.play()
+                logger.info(f"In riproduzione dalla cache: {filename}")
+                return filename
+            else:
+                logger.warning("Impossibile riprodurre la musica, stato attuale non permette la transizione a DANCING.")
+                return None
         return None
 
     def play_all_from_cache(self, shuffle=True):
@@ -100,6 +106,7 @@ class MusicTool:
             filepath = os.path.join(self.download_path, target_file)
             pygame.mixer.music.load(filepath)
             pygame.mixer.music.play()
+            self._currently_playing = target_file
             return target_file, f"In riproduzione dalla cache: {target_file}"
         return None, "Non trovato in cache."
 
@@ -133,11 +140,18 @@ class MusicTool:
                 filename = ydl.prepare_filename(video_info).rsplit('.', 1)[0] + ".mp3"
                 em.publish("downloading", {"message": None, "started": False})
                 pygame.mixer.music.load(filename)
-                em.publish("music", {"message": None, "started": True})
-                pygame.mixer.music.play()
-                return f"Scaricato e in riproduzione: {video_info['title']}"
+                
+                if get_global_status().set_state(State.DANCING, reason="Riproduzione musicale"):
+                    em.publish("music", {"message": None, "started": True})
+                    self._currently_playing = filename
+                    pygame.mixer.music.play()
+                    return f"Scaricato e in riproduzione: {video_info['title']}"
+                else:
+                    logger.warning("Impossibile riprodurre la musica, stato attuale non permette la transizione a DANCING.")
+                    return "Musica scaricata ma non posso riprodurla in questo momento."
         except Exception as e:
             em.publish("loading", {"message": f"Errore download: {str(e)}", "started": False})
+            self._currently_playing = None
             return f"Errore download: {str(e)}"
 
     def play_any(self, query):
@@ -155,6 +169,7 @@ class MusicTool:
         self._stop_event = True # Segnala al thread di uscire
         em = EventManager()
         em.publish("music", {"message": None, "started": False})
+        self._currently_playing = None
         pygame.mixer.music.stop()
         pygame.mixer.music.unload()
         
@@ -165,7 +180,7 @@ class MusicTool:
             
         self._playlist = []
         self._current_index = 0
-        get_global_status().set_state(State.IDLE, reason="Musica fermata")
+        #get_global_status().set_state(State.IDLE, reason="Musica fermata")
         return "Musica e playlist fermate."
 
     def is_playing(self):
@@ -187,3 +202,11 @@ def stop_music():
 def play_cached_music(shuffle: bool = True):
     """Riproduce musica già presente nella cache, già ascoltata in precedenza."""
     return _music_instance.play_all_from_cache(shuffle)
+
+def stop_music_external():
+    """Funzione esterna per fermare la musica (es. da joystick)."""
+    return _music_instance.stop()
+
+def get_currently_playing():
+    """Restituisce il titolo del brano attualmente in riproduzione, se disponibile."""
+    return _music_instance._currently_playing

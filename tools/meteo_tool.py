@@ -109,7 +109,7 @@ async def sync_meteo(days_from_today: int = 1, city: str = "Bareggio") -> str:
             config.logger.debug(f"Elaborazione entry meteo: {entry}")
             try:                
                 jsonObject[entry['hours']] = {'temperature': entry['temp'], 'precipitation': entry['prec']}
-                if int(entry['hours']) == 24:
+                if int(entry['hours'].split(':')[0]) == 24:
                     break
             except Exception as e:
                 # Ignora i campi ora non numerici

@@ -15,13 +15,12 @@ class State(Enum):
 
 
 _VALID_TRANSITIONS = {
-    State.IDLE: {State.LISTENING},
-    State.LISTENING: {State.TRANSCRIBING},
-    State.TRANSCRIBING: {State.THINKING},
-    State.TRANSCRIBING: {State.IDLE},
-    State.THINKING: {State.SPEAKING, State.DANCING},
-    State.SPEAKING: {State.IDLE},
-    State.DANCING: {State.IDLE},
+    State.IDLE: {State.LISTENING, State.SPEAKING},
+    State.LISTENING: {State.TRANSCRIBING, State.IDLE},
+    State.TRANSCRIBING: {State.THINKING, State.IDLE},
+    State.THINKING: {State.SPEAKING, State.DANCING, State.IDLE},
+    State.SPEAKING: {State.SPEAKING, State.IDLE},
+    State.DANCING: {State.DANCING,State.IDLE}
 }
 
 

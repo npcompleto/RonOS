@@ -75,7 +75,9 @@ class TextToSpeechManager:
         if not sentences:
             return
 
-        get_global_status().set_state(State.SPEAKING, reason="Inizio sintesi vocale")
+        if not get_global_status().set_state(State.SPEAKING, reason="Inizio sintesi vocale"):
+            config.logger.warning("Impossibile iniziare a parlare, stato attuale non permette la transizione a SPEAKING.")
+            return
         config.logger.info(f"Ron dice: '{text}' (in {len(sentences)} pezzi)")
         
         # Reset del flag di interruzione all'inizio di ogni sessione di parlato
@@ -149,4 +151,5 @@ class TextToSpeechManager:
         
         # 2. Interrompe immediatamente l'audio a livello hardware tramite Pygame (Canale 0)
         stop_audio()
-        get_global_status().set_state(State.IDLE, reason="Interruzione parlato")
+        if get_global_status()._state == State.SPEAKING:
+            get_global_status().set_state(State.IDLE, reason="Interruzione parlato")

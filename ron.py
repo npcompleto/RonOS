@@ -13,6 +13,7 @@ from event_manager import EventManager
 from jobs import JobScheduler, JobScheduleError
 from tools.school_tool import axios_sync, axios_rank_sync
 from tools.meteo_tool import run_sync_weekly_meteo
+from tools.music_tool import stop_music_external, get_currently_playing
 from status import get_global_status, State, StateMachine
 
 logger = config.logger
@@ -30,6 +31,12 @@ def status_monitor():
                 if robot_face:
                     robot_face.set_expression(Expression.DANCING)
             
+            #Aggiorna la canzone corrente
+            if utils.is_playing_music() and get_global_status().get_state() == State.DANCING:
+                current_song = get_currently_playing()
+                if robot_face and current_song:
+                    robot_face.set_text(current_song)
+            
             logger.debug(f"Wi-Fi Link Quality: {utils.get_wifi_strength()}%")
             if robot_face:
                 robot_face.set_wifi_level(utils.get_wifi_strength())
@@ -46,8 +53,6 @@ def on_transcription(text: str) -> None:
         robot_face.set_text(text)
     utils.play_audio(config.SOUNDS["ack"])
     response = process_message(text)
-    if robot_face:
-        robot_face.set_expression(Expression.NEUTRAL)
     if response:
         tts.speak(response)
 
@@ -137,22 +142,19 @@ def joystick_handler(data: dict) -> None:
     logger.info(f"Joystick event received: {data}")
     if data["action"]=='click':
         if utils.is_playing_music():
-            robot_face.set_text("Spengo la musica...")
-            process_message("Spegni la musica")
+            stop_music_external()
+            get_global_status().set_state(State.IDLE, reason="Musica fermata da Joystick")
         tts.stop_speaking()
-        utils.stop_audio()
-        if robot_face:
-            robot_face.set_expression(Expression.NEUTRAL)
-            robot_face.set_text("")
             
 
 # Definiamo la funzione di callback per elaborare il messaggio
 def process_message(user_message: str) -> str:
     logger.info(f"Messaggio ricevuto: {user_message}")
+    if not get_global_status().set_state(State.THINKING, reason="Elaborazione messaggio"):
+        logger.warning("Impossibile elaborare il messaggio, stato attuale non permette la transizione a THINKING.")
+        return "Non posso rispondere in questo momento."
+
     response = assistant.agent.run(user_message)
-    if robot_face:
-        robot_face.set_text("")
-        robot_face.set_expression(Expression.NEUTRAL)
     return response.content
 
 def process_telegram_message(user_message: str) -> str:
@@ -165,6 +167,9 @@ def status_handler(old_state: State, new_state: State, reason: str) -> None:
     if new_state == State.IDLE and robot_face:
         robot_face.set_expression(Expression.NEUTRAL)
         robot_face.set_text("")
+    elif new_state == State.DANCING and robot_face:
+        robot_face.set_expression(Expression.DANCING)
+        robot_face.set_text("🎶")
 
 if __name__ == "__main__":
    

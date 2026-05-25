@@ -10,7 +10,7 @@ class MusicAgent(BaseAgent):
             instructions=[
                 "Usa il tool 'play_music' per cercare e riprodurre musica",
                 "Usa il tool 'stop_music' per fermare la musica",
-                "Usa il tool 'play_cached_music' per riprodurre musica già presente nella cache, già ascoltata o se ti chiede di riprodurre la sua playlist"
+                "Usa il tool 'play_cached_music' per riprodurre musica già presente nella cache, già ascoltata o se ti chiede di riprodurre la sua playlist o la sua musica o qulcosa del genere."
             ],
             tools=[play_music, stop_music, play_cached_music]
         )

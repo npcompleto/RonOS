@@ -1,0 +1,2 @@
+[ ] - Fix macchina a stati. Gestire il blocco. Rimuovi il cambio stato dai tool. Cerca il più possibilie di centralizzarlo in una regia.
+[ ] - Nella ricerca dei brani su youtube, creare un tool che gli permetta di cercare i brani e scegliere solo quelli che hanno una canzone singola.

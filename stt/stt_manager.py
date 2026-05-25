@@ -206,6 +206,7 @@ class SpeechToTextManager:
         return np.interp(np.linspace(0, 1, num_out), np.linspace(0, 1, len(filtered)), filtered).astype(np.float32)
 
     def _vad_loop(self) -> None:
+        wake_start_time = None
         speech_buffer: list[np.ndarray] = []
         last_voice_time: float = 0.0
         speech_start_time: float = 0.0  # <--- AGGIUNTO per limite 5 secondi
@@ -249,10 +250,11 @@ class SpeechToTextManager:
                             accumulator = np.array([], dtype=np.float32)
                             oww_accumulator = np.array([], dtype=np.float32)
                             speech_buffer = [] # Whisper partirà da zero assoluto
-                            
+                            get_global_status().set_state(State.LISTENING, reason="Wake Word Rilevata")
+                            wake_start_time = time.time()
                             if self._on_wake:
                                 self._on_wake(text)
-                            get_global_status().set_state(State.LISTENING, reason="Wake Word Rilevata")
+                            
                             continue
 
                 # --- WAKEWORD HANDLER: OPENWAKEWORD ---
@@ -320,6 +322,13 @@ class SpeechToTextManager:
                     speech_buffer.append(frame)
                 else:
                     logger.debug("No speech detected")
+                    if (wake_start_time and time.time() - wake_start_time > 5.0):
+                        logger.debug("Reset stato LISTENING per inattività prolungata")
+                        get_global_status().set_state(State.IDLE, reason="Timeout inattività")
+                        accumulator = np.array([], dtype=np.float32)
+                        oww_accumulator = np.array([], dtype=np.float32)
+                        speech_buffer = [] # Reset fondamentale
+                        wake_start_time = None
 
                 # --- Controllo chiusura segmento ---
                 if self._is_speaking:
@@ -333,6 +342,7 @@ class SpeechToTextManager:
                             motivo_chiusura = "Timeout Silenzio" if (now - last_voice_time > self._silence_timeout) else "Limite 5s"
                             logger.info(f"📤 Invio a Whisper: {duration:.2f}s ({motivo_chiusura})")
                             get_global_status().set_state(State.TRANSCRIBING, reason="Segmento Completo Rilevato")
+                            wake_start_time = None
                             # Salva l'audio sovrascrivendo sempre lo stesso file
                             self._save_wav(full_audio, prefix="", override_filename="last_whisper.wav")
                             try:
@@ -359,7 +369,6 @@ class SpeechToTextManager:
                     logger.info(f"✅ Trascrizione: \"{text}\"")
                     if self._on_transcription:
                         self._on_transcription(text)
-                        get_global_status().set_state(State.THINKING, reason="Trascrizione completata")
                         self._is_awake = False 
                 else:
                     get_global_status().set_state(State.IDLE, reason="Trascrizione ignorata")
