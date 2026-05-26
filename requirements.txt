@@ -22,3 +22,4 @@ openwakeword
 uvicorn
 fastapi
 psutil
+mutagen

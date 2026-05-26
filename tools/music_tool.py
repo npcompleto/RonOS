@@ -10,6 +10,7 @@ from config import logger, MUSIC_CACHE_DIR
 from langchain_core.tools import tool
 from event_manager import EventManager
 from status import get_global_status, State
+from mutagen.mp3 import MP3
 
 
 class MusicTool:
@@ -252,6 +253,26 @@ class MusicTool:
                 
         except Exception as e:
             return f"Errore nella ricerca: {str(e)}"
+    def get_song_duration(self, filename):
+        """Restituisce la durata totale del file in secondi."""
+        filepath = os.path.join(self.download_path, filename)
+        try:
+            audio = MP3(filepath)
+            return audio.info.length
+        except Exception as e:
+            logger.error(f"Errore lettura durata: {e}")
+            return 0
+
+    def get_playback_status(self):
+        """Restituisce (durata_totale, tempo_trascorso) in secondi."""
+        if not self._currently_playing or not self.is_playing():
+            return 0, 0
+        
+        total = self.get_song_duration(self._currently_playing)
+        # pygame.mixer.music.get_pos() restituisce i millisecondi
+        elapsed = pygame.mixer.music.get_pos() / 1000
+        
+        return total, elapsed
 
 _music_instance = MusicTool()
 @tool
@@ -299,3 +320,8 @@ def stop_music_external():
 def get_currently_playing():
     """Restituisce il titolo del brano attualmente in riproduzione, se disponibile."""
     return _music_instance._currently_playing
+
+def get_music_progress():
+    """Restituisce lo stato della riproduzione attuale (durata totale e tempo trascorso)."""
+    total, elapsed = _music_instance.get_playback_status()
+    return {"total_seconds": total, "elapsed_seconds": elapsed}

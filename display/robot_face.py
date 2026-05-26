@@ -54,7 +54,7 @@ class RobotFace:
             try: self.heart_original = pygame.image.load(self.heart_path).convert_alpha()
             except: pass
 
-        self._font = pygame.font.SysFont("Arial", int(self._ref * 0.06), bold=True)
+        self._font = pygame.font.SysFont("Arial", int(self._ref * 0.045), bold=False)
         self._current_text = ""
         self._wrapped_lines = [] 
 
@@ -70,6 +70,11 @@ class RobotFace:
         
         self._wifi_pct = 1.0 
         self._cpu_temp = 0.0 # Temperatura CPU
+
+        # Stato Progress Bar
+        self._progress_current = 0
+        self._progress_total = 0
+        self._show_progress = False
 
         # Animazioni
         self._nod_timer = 0.0
@@ -143,6 +148,12 @@ class RobotFace:
             "mouth_h": 0.05 * r, "mouth_y": mouth_y_aligned, 
             "mouth_curve": 0.3, "mouth_open": 1.0,
         }
+
+    def set_progress(self, current, total):
+        """Imposta il progresso. Se total > 0 mostra la barra, altrimenti la nasconde."""
+        self._progress_current = current
+        self._progress_total = total
+        self._show_progress = (total > 0)
 
     def _update_targets(self):
         self._set_defaults()
@@ -288,6 +299,18 @@ class RobotFace:
                 txt_rect = txt_surf.get_rect(center=(self.width // 2, y_pos))
                 self.screen.blit(txt_surf, txt_rect)
 
+        if self._show_progress and self._progress_total > 0:
+            pct = min(1.0, self._progress_current / self._progress_total)
+            bar_w = int(self.width * 0.6)
+            bar_h = int(self._ref * 0.02)
+            bar_x = (self.width - bar_w) // 2
+            bar_y = int(self.height * 0.75)
+            
+            # Sfondo barra
+            pygame.draw.rect(self.screen, (50, 50, 70), (bar_x, bar_y, bar_w, bar_h), border_radius=5)
+            # Riempimento
+            pygame.draw.rect(self.screen, self.eye_color, (bar_x, bar_y, int(bar_w * pct), bar_h), border_radius=5)
+
     def _draw_eye(self, cx, cy, side):
         pulse = 1.0
         color = self.eye_color
@@ -397,6 +420,7 @@ class RobotFaceManager:
                 elif cmd == "WIFI": face.set_wifi_level(val)  # <--- GESTIONE COMANDO WIFI
                 elif cmd == "TEMP": face._cpu_temp = val
                 elif cmd == "STOP": running = False
+                elif cmd == "PROGRESS": face.set_progress(val[0], val[1])
             for ev in pygame.event.get():
                 if ev.type == pygame.QUIT: running = False
                 if ev.type == pygame.KEYDOWN and ev.key == pygame.K_ESCAPE: running = False
@@ -434,6 +458,7 @@ class RobotFaceManager:
     def set_wifi_level(self, percentage: float): self._parent_conn.send(("WIFI", percentage)) # <--- NUOVO METODO MANAGER
     def set_cpu_temp(self, t): self._parent_conn.send(("TEMP", t))
     def nod(self): self._parent_conn.send(("NOD", None))
+    def set_progress(self, current, total): self._parent_conn.send(("PROGRESS", (current, total)))
 
 if __name__ == "__main__":
     manager = RobotFaceManager(fullscreen=False)
