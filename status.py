@@ -71,8 +71,7 @@ class StateMachine:
         """Attempt to set a new state. Returns True if state changed."""
         with self._lock:
             old = self._state
-            if old == new:
-                return False
+            
             if not force and new not in _VALID_TRANSITIONS.get(old, set()):
                 config.logger.warning(f"Invalid transition attempted: {old} -> {new}")
                 return False
