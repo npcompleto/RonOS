@@ -186,7 +186,7 @@ export default function Playlist({ onBack }) {
       {showCreateForm && (
         <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '2rem' }}>
           <form onSubmit={handleCreatePlaylist}>
-            <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+            <div className="responsive-flex" style={{ marginBottom: '1rem' }}>
               <input
                 type="text"
                 placeholder="Enter playlist name..."
@@ -227,17 +227,8 @@ export default function Playlist({ onBack }) {
             {playlists.map((playlist) => (
               <div key={playlist.name} className="glass-panel" style={{ padding: 0, overflow: 'hidden' }}>
                 <div
+                  className="playlist-header-row"
                   onClick={() => setExpandedPlaylist(expandedPlaylist === playlist.name ? null : playlist.name)}
-                  style={{
-                    padding: '1rem 1.5rem',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    transition: 'background-color 0.2s ease'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1 }}>
                     <span style={{ fontSize: '1.2rem' }}>
@@ -301,7 +292,7 @@ export default function Playlist({ onBack }) {
           {cacheSongs.length} song{cacheSongs.length !== 1 ? 's' : ''} in cache
         </p>
         <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
-          <div style={{ display: 'flex', gap: '0.75rem', flexDirection: 'column' }}>
+          <div className="download-form">
             <input
               type="text"
               placeholder="Enter URL to download..."
@@ -380,7 +371,7 @@ export default function Playlist({ onBack }) {
           justifyContent: 'center',
           zIndex: 1000
         }}>
-          <div className="glass-panel" style={{ padding: '2rem', maxWidth: '400px' }}>
+          <div className="glass-panel modal-content">
             <h3>Add to Playlist</h3>
             <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
               Song: <strong>{songToAddToPlaylist}</strong>
@@ -418,7 +409,7 @@ export default function Playlist({ onBack }) {
               </>
             )}
 
-            <div style={{ display: 'flex', gap: '1rem' }}>
+            <div className="modal-buttons">
               <button
                 onClick={() => {
                   setSongToAddToPlaylist(null);
@@ -455,12 +446,12 @@ export default function Playlist({ onBack }) {
           justifyContent: 'center',
           zIndex: 1000
         }}>
-          <div className="glass-panel" style={{ padding: '2rem', maxWidth: '400px' }}>
+          <div className="glass-panel modal-content">
             <h3>Delete Playlist?</h3>
             <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
               Are you sure you want to delete "{deleteConfirm}"? This action cannot be undone.
             </p>
-            <div style={{ display: 'flex', gap: '1rem' }}>
+            <div className="modal-buttons">
               <button 
                 className="btn-danger"
                 onClick={() => handleDeletePlaylist(deleteConfirm)}
