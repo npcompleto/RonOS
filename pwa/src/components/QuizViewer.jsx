@@ -25,9 +25,9 @@ export default function QuizViewer({ filename, onBack }) {
     loadQuiz();
   }, [filename]);
 
-  if (loading) return <div className="fade-in">Loading quiz details...</div>;
-  if (error) return <div className="fade-in" style={{ color: 'var(--danger)' }}>Error: {error}</div>;
-  if (!quizData || !quizData.questions) return <div>Invalid quiz data.</div>;
+  if (loading) return <div className="fade-in subtitle">Loading quiz details...</div>;
+  if (error) return <div className="fade-in error-banner">Error: {error}</div>;
+  if (!quizData || !quizData.questions) return <div className="empty-state glass-panel">Invalid quiz data.</div>;
 
   const handleOptionClick = (option) => {
     if (answered) return;
@@ -68,12 +68,12 @@ export default function QuizViewer({ filename, onBack }) {
           <div className="score-display">
             {score} / {quizData.questions.length}
           </div>
-          <p style={{ color: 'var(--text-secondary)' }}>
+          <p className="subtitle">
             You scored {Math.round((score / quizData.questions.length) * 100)}%
           </p>
-          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '2rem' }}>
+          <div className="quiz-results-actions">
             <button className="btn-primary" onClick={resetQuiz}>Retry Quiz</button>
-            <button className="back-btn" onClick={onBack}>Choose Another</button>
+            <button className="btn-secondary" onClick={onBack}>Choose Another</button>
           </div>
         </div>
       </div>
@@ -84,11 +84,11 @@ export default function QuizViewer({ filename, onBack }) {
 
   return (
     <div className="quiz-viewer fade-in">
-      <button className="back-btn" style={{ marginBottom: '1.5rem' }} onClick={onBack}>
+      <button className="back-btn mb-4" onClick={onBack}>
         ← Back to Quizzes
       </button>
 
-      <div className="quiz-header glass-panel" style={{ padding: '1.5rem', marginBottom: '2rem' }}>
+      <div className="quiz-header glass-panel">
         <h2>{quizData.subject || filename.replace('.json', '')}</h2>
         {quizData.date && <div className="quiz-meta">Date: {quizData.date}</div>}
         <div className="quiz-meta">

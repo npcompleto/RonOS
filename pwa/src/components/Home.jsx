@@ -10,7 +10,7 @@ export default function Home({ onNavigate }) {
   return (
     <div className="fade-in">
       <h2>Welcome to Ron Hub</h2>
-      <p style={{ color: 'var(--text-secondary)', marginBottom: '3rem' }}>
+      <p className="subtitle">
         Choose a feature to get started.
       </p>
 
@@ -18,7 +18,6 @@ export default function Home({ onNavigate }) {
         <div 
           className="feature-card glass-panel"
           onClick={() => handleFeatureClick('quiz')}
-          style={{ cursor: 'pointer' }}
         >
           <div className="feature-icon">📝</div>
           <h3>Quiz</h3>
@@ -29,7 +28,6 @@ export default function Home({ onNavigate }) {
         <div 
           className="feature-card glass-panel"
           onClick={() => handleFeatureClick('playlist')}
-          style={{ cursor: 'pointer' }}
         >
           <div className="feature-icon">🎵</div>
           <h3>Playlist</h3>

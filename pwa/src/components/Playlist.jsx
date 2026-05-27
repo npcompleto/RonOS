@@ -151,7 +151,7 @@ export default function Playlist({ onBack }) {
   if (loading) return (
     <div className="fade-in">
       <button className="back-btn mb-4" onClick={onBack}>← Back to Home</button>
-      <div>Loading playlists...</div>
+      <div className="subtitle">Loading playlists...</div>
     </div>
   );
 
@@ -159,48 +159,33 @@ export default function Playlist({ onBack }) {
     <div className="fade-in">
       <button className="back-btn mb-4" onClick={onBack}>← Back to Home</button>
       <h2>My Playlists</h2>
-      <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>
+      <p className="subtitle">
         Manage and create your custom playlists.
       </p>
 
       {error && (
-        <div style={{ 
-          color: 'var(--danger)', 
-          backgroundColor: 'rgba(239, 68, 68, 0.1)',
-          padding: '1rem',
-          borderRadius: '0.5rem',
-          marginBottom: '2rem'
-        }}>
+        <div className="error-banner">
           Error: {error}
         </div>
       )}
 
       <button 
-        className="btn-primary" 
+        className="btn-primary mb-4" 
         onClick={() => setShowCreateForm(!showCreateForm)}
-        style={{ marginBottom: '2rem' }}
       >
         {showCreateForm ? '✕ Cancel' : '+ Create New Playlist'}
       </button>
 
       {showCreateForm && (
-        <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '2rem' }}>
+        <div className="glass-panel mb-4" style={{ padding: '1.25rem' }}>
           <form onSubmit={handleCreatePlaylist}>
-            <div className="responsive-flex" style={{ marginBottom: '1rem' }}>
+            <div className="create-playlist-form">
               <input
+                className="form-input"
                 type="text"
                 placeholder="Enter playlist name..."
                 value={newPlaylistName}
                 onChange={(e) => setNewPlaylistName(e.target.value)}
-                style={{
-                  flex: 1,
-                  padding: '0.75rem',
-                  borderRadius: '0.5rem',
-                  border: '1px solid var(--border)',
-                  backgroundColor: 'var(--bg-secondary)',
-                  color: 'var(--text)',
-                  fontFamily: 'inherit'
-                }}
                 autoFocus
                 disabled={isSubmitting}
               />
@@ -217,26 +202,26 @@ export default function Playlist({ onBack }) {
       )}
 
       {playlists.length === 0 ? (
-        <div className="glass-panel" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+        <div className="glass-panel empty-state">
           <p>No playlists yet. Create one to get started!</p>
         </div>
       ) : (
-        <div style={{ marginBottom: '2rem' }}>
-          <h3 style={{ marginBottom: '1rem' }}>🎵 My Playlists</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        <div className="playlist-section">
+          <h3 className="section-title">🎵 My Playlists</h3>
+          <div className="playlist-list">
             {playlists.map((playlist) => (
-              <div key={playlist.name} className="glass-panel" style={{ padding: 0, overflow: 'hidden' }}>
+              <div key={playlist.name} className="glass-panel playlist-card">
                 <div
                   className="playlist-header-row"
                   onClick={() => setExpandedPlaylist(expandedPlaylist === playlist.name ? null : playlist.name)}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1 }}>
-                    <span style={{ fontSize: '1.2rem' }}>
+                  <div className="playlist-info">
+                    <span className="playlist-toggle-icon">
                       {expandedPlaylist === playlist.name ? '▼' : '▶'}
                     </span>
                     <div>
-                      <h4 style={{ margin: '0 0 0.25rem 0' }}>{playlist.name}</h4>
-                      <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                      <h4>{playlist.name}</h4>
+                      <p>
                         {playlist.songs?.length || 0} song{playlist.songs?.length !== 1 ? 's' : ''}
                       </p>
                     </div>
@@ -247,21 +232,20 @@ export default function Playlist({ onBack }) {
                       setDeleteConfirm(playlist.name);
                     }}
                     className="btn-danger"
-                    style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}
                   >
                     Delete
                   </button>
                 </div>
 
                 {expandedPlaylist === playlist.name && (
-                  <div style={{ borderTop: '1px solid var(--border)', padding: '1.5rem' }}>
+                  <div className="playlist-expanded-content">
                     {playlist.songs && playlist.songs.length > 0 ? (
-                      <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                      <ul className="song-list">
                         {playlist.songs.map((song, index) => (
                           <li key={index} className="song-item">
                             <div className="song-meta">
-                              <span style={{ color: 'var(--text-secondary)', minWidth: '1.5rem' }}>{index + 1}.</span>
-                              <span style={{ flex: 1, wordBreak: 'break-word' }}>{song}</span>
+                              <span className="song-number">{index + 1}.</span>
+                              <span className="song-name">{song}</span>
                             </div>
                             <div className="song-actions">
                               <button
@@ -276,7 +260,7 @@ export default function Playlist({ onBack }) {
                         ))}
                       </ul>
                     ) : (
-                      <p style={{ color: 'var(--text-secondary)', margin: 0 }}>No songs in this playlist yet.</p>
+                      <p className="subtitle" style={{ margin: 0 }}>No songs in this playlist yet.</p>
                     )}
                   </div>
                 )}
@@ -286,51 +270,42 @@ export default function Playlist({ onBack }) {
         </div>
       )}
 
-      <div style={{ marginTop: '3rem' }}>
-        <h3 style={{ marginBottom: '1rem' }}>📁 Cache Songs</h3>
-        <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+      <div className="playlist-section">
+        <h3 className="section-title">📁 Cache Songs</h3>
+        <p className="playlist-count">
           {cacheSongs.length} song{cacheSongs.length !== 1 ? 's' : ''} in cache
         </p>
-        <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
+        <div className="glass-panel mb-4" style={{ padding: '1.25rem' }}>
           <div className="download-form">
             <input
+              className="form-input"
               type="text"
               placeholder="Enter URL to download..."
               value={downloadUrl}
               onChange={(e) => setDownloadUrl(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '0.75rem',
-                borderRadius: '0.75rem',
-                border: '1px solid var(--border)',
-                backgroundColor: 'var(--bg-secondary)',
-                color: 'var(--text)',
-                fontFamily: 'inherit'
-              }}
             />
             <button
               type="button"
               className="btn-primary"
               onClick={handleDownloadUrl}
               disabled={isDownloading || !downloadUrl.trim()}
-              style={{ width: 'fit-content' }}
             >
               {isDownloading ? 'Downloading...' : 'Download URL'}
             </button>
           </div>
         </div>
         {cacheSongs.length === 0 ? (
-          <div className="glass-panel" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+          <div className="glass-panel empty-state">
             <p>No songs in cache yet.</p>
           </div>
         ) : (
-          <div className="glass-panel" style={{ padding: '1.5rem' }}>
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+          <div className="glass-panel" style={{ padding: '1rem' }}>
+            <ul className="song-list">
               {cacheSongs.map((song, index) => (
                 <li key={index} className="song-item">
                   <div className="song-meta">
-                    <span style={{ color: 'var(--text-secondary)', minWidth: '1.5rem' }}>{index + 1}.</span>
-                    <span style={{ flex: 1, wordBreak: 'break-word' }}>{song}</span>
+                    <span className="song-number">{index + 1}.</span>
+                    <span className="song-name">{song}</span>
                   </div>
                   <div className="song-actions">
                     <button
@@ -359,54 +334,30 @@ export default function Playlist({ onBack }) {
       </div>
 
       {songToAddToPlaylist && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
+        <div className="modal-overlay">
           <div className="glass-panel modal-content">
             <h3>Add to Playlist</h3>
-            <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+            <p className="subtitle">
               Song: <strong>{songToAddToPlaylist}</strong>
             </p>
             
             {playlists.length === 0 ? (
-              <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+              <p className="subtitle">
                 No playlists available. Create one first.
               </p>
             ) : (
-              <>
-                <select
-                  value={selectedPlaylistForSong}
-                  onChange={(e) => setSelectedPlaylistForSong(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    marginBottom: '1.5rem',
-                    borderRadius: '0.5rem',
-                    border: '1px solid var(--border)',
-                    backgroundColor: 'var(--bg-secondary)',
-                    color: 'var(--text)',
-                    fontFamily: 'inherit',
-                    fontSize: '1rem',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <option value="">Select a playlist...</option>
-                  {playlists.map((playlist) => (
-                    <option key={playlist.name} value={playlist.name}>
-                      {playlist.name}
-                    </option>
-                  ))}
-                </select>
-              </>
+              <select
+                className="form-select mb-4"
+                value={selectedPlaylistForSong}
+                onChange={(e) => setSelectedPlaylistForSong(e.target.value)}
+              >
+                <option value="">Select a playlist...</option>
+                {playlists.map((playlist) => (
+                  <option key={playlist.name} value={playlist.name}>
+                    {playlist.name}
+                  </option>
+                ))}
+              </select>
             )}
 
             <div className="modal-buttons">
@@ -416,14 +367,12 @@ export default function Playlist({ onBack }) {
                   setSelectedPlaylistForSong('');
                 }}
                 className="btn-secondary"
-                style={{ flex: 1 }}
               >
                 Cancel
               </button>
               <button
                 onClick={handleAddSongToPlaylist}
                 className="btn-primary"
-                style={{ flex: 1 }}
                 disabled={!selectedPlaylistForSong || playlists.length === 0}
               >
                 Add
@@ -434,35 +383,22 @@ export default function Playlist({ onBack }) {
       )}
 
       {deleteConfirm && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
+        <div className="modal-overlay">
           <div className="glass-panel modal-content">
             <h3>Delete Playlist?</h3>
-            <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+            <p className="subtitle">
               Are you sure you want to delete "{deleteConfirm}"? This action cannot be undone.
             </p>
             <div className="modal-buttons">
               <button 
                 className="btn-danger"
                 onClick={() => handleDeletePlaylist(deleteConfirm)}
-                style={{ flex: 1 }}
               >
                 Delete
               </button>
               <button 
-                className="back-btn"
+                className="btn-secondary"
                 onClick={() => setDeleteConfirm(null)}
-                style={{ flex: 1 }}
               >
                 Cancel
               </button>

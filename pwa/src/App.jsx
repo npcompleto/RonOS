@@ -27,18 +27,7 @@ function App() {
       <header className="header">
         <h1>Ron Hub</h1>
         {currentPage !== 'home' && (
-          <button 
-            className="home-btn"
-            onClick={handleBackToHome}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: 'var(--text)',
-              cursor: 'pointer',
-              fontSize: '1.2rem',
-              padding: '0.5rem 1rem'
-            }}
-          >
+          <button className="home-btn" onClick={handleBackToHome}>
             🏠 Home
           </button>
         )}
