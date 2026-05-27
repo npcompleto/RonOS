@@ -4,7 +4,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from event_manager import EventManager
 from config import logger, MUSIC_CACHE_DIR
-from tools.music_tool import get_playlists_external, get_cache_songs
+from tools.music_tool import get_playlists_external, get_cache_songs, download_music_external
 
 from fastapi.middleware.cors import CORSMiddleware
 import os
@@ -241,6 +241,25 @@ async def delete_cache_song(song_name: str):
     try:
         os.remove(filepath)
         return {"status": "success", "message": "Song deleted from cache"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+class DownloadCacheSongRequest(BaseModel):
+    url: str
+
+@app.post("/api/cache_songs/download")
+async def download_cache_song(request: DownloadCacheSongRequest):
+    """Scarica un URL nella cache locale usando download_music_external."""
+    if not request.url.strip():
+        raise HTTPException(status_code=400, detail="URL cannot be empty")
+
+    try:
+        filename = download_music_external(request.url)
+        if not filename:
+            raise HTTPException(status_code=500, detail="Download failed")
+        return {"status": "success", "filename": filename}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { fetchPlaylists, createPlaylist, deletePlaylist, fetchCacheSongs, removeSongFromPlaylist, addSongToPlaylist, deleteCacheSong } from '../api';
+import { fetchPlaylists, createPlaylist, deletePlaylist, fetchCacheSongs, removeSongFromPlaylist, addSongToPlaylist, deleteCacheSong, downloadCacheSong } from '../api';
 import { logger } from '../logger';
 
 export default function Playlist({ onBack }) {
@@ -14,6 +14,8 @@ export default function Playlist({ onBack }) {
   const [expandedPlaylist, setExpandedPlaylist] = useState(null);
   const [songToAddToPlaylist, setSongToAddToPlaylist] = useState(null);
   const [selectedPlaylistForSong, setSelectedPlaylistForSong] = useState('');
+  const [downloadUrl, setDownloadUrl] = useState('');
+  const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
     logger.info('Playlist component mounted, loading playlists and cache songs');
@@ -121,6 +123,28 @@ export default function Playlist({ onBack }) {
     } catch (err) {
       logger.error(`Failed to delete song: ${err.message}`);
       setError(err.message);
+    }
+  };
+
+  const handleDownloadUrl = async () => {
+    if (!downloadUrl.trim()) {
+      setError('Please enter a valid URL');
+      return;
+    }
+
+    try {
+      setError(null);
+      setIsDownloading(true);
+      logger.info(`Downloading song from: ${downloadUrl}`);
+      await downloadCacheSong(downloadUrl.trim());
+      logger.info('Download completed successfully');
+      setDownloadUrl('');
+      await loadCacheSongs();
+    } catch (err) {
+      logger.error(`Failed to download song: ${err.message}`);
+      setError(err.message);
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -243,44 +267,20 @@ export default function Playlist({ onBack }) {
                     {playlist.songs && playlist.songs.length > 0 ? (
                       <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                         {playlist.songs.map((song, index) => (
-                          <li key={index} style={{ 
-                            padding: '0.75rem',
-                            borderBottom: index < playlist.songs.length - 1 ? '1px solid var(--border)' : 'none',
-                            color: 'var(--text)',
-                            display: 'flex',
-                            gap: '0.75rem',
-                            alignItems: 'center',
-                            justifyContent: 'space-between'
-                          }}>
-                            <div style={{ display: 'flex', gap: '0.75rem', flex: 1, alignItems: 'center' }}>
+                          <li key={index} className="song-item">
+                            <div className="song-meta">
                               <span style={{ color: 'var(--text-secondary)', minWidth: '1.5rem' }}>{index + 1}.</span>
                               <span style={{ flex: 1, wordBreak: 'break-word' }}>{song}</span>
                             </div>
-                            <button
-                              onClick={() => handleRemoveSongFromPlaylist(playlist.name, song)}
-                              style={{
-                                padding: '0.4rem 0.75rem',
-                                backgroundColor: 'rgba(239, 68, 68, 0.2)',
-                                color: 'var(--danger)',
-                                border: '1px solid rgba(239, 68, 68, 0.3)',
-                                borderRadius: '0.35rem',
-                                cursor: 'pointer',
-                                fontSize: '0.8rem',
-                                fontFamily: 'inherit',
-                                whiteSpace: 'nowrap',
-                                transition: 'all 0.2s ease'
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.3)';
-                                e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.5)';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.2)';
-                                e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.3)';
-                              }}
-                            >
-                              ✕ Remove
-                            </button>
+                            <div className="song-actions">
+                              <button
+                                className="icon-btn remove"
+                                title="Remove from playlist"
+                                onClick={() => handleRemoveSongFromPlaylist(playlist.name, song)}
+                              >
+                                ✕
+                              </button>
+                            </div>
                           </li>
                         ))}
                       </ul>
@@ -300,6 +300,34 @@ export default function Playlist({ onBack }) {
         <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
           {cacheSongs.length} song{cacheSongs.length !== 1 ? 's' : ''} in cache
         </p>
+        <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
+          <div style={{ display: 'flex', gap: '0.75rem', flexDirection: 'column' }}>
+            <input
+              type="text"
+              placeholder="Enter URL to download..."
+              value={downloadUrl}
+              onChange={(e) => setDownloadUrl(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                borderRadius: '0.75rem',
+                border: '1px solid var(--border)',
+                backgroundColor: 'var(--bg-secondary)',
+                color: 'var(--text)',
+                fontFamily: 'inherit'
+              }}
+            />
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={handleDownloadUrl}
+              disabled={isDownloading || !downloadUrl.trim()}
+              style={{ width: 'fit-content' }}
+            >
+              {isDownloading ? 'Downloading...' : 'Download URL'}
+            </button>
+          </div>
+        </div>
         {cacheSongs.length === 0 ? (
           <div className="glass-panel" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
             <p>No songs in cache yet.</p>
@@ -308,72 +336,28 @@ export default function Playlist({ onBack }) {
           <div className="glass-panel" style={{ padding: '1.5rem' }}>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
               {cacheSongs.map((song, index) => (
-                <li key={index} style={{ 
-                  padding: '0.75rem',
-                  borderBottom: index < cacheSongs.length - 1 ? '1px solid var(--border)' : 'none',
-                  color: 'var(--text)',
-                  display: 'flex',
-                  gap: '0.75rem',
-                  alignItems: 'center',
-                  justifyContent: 'space-between'
-                }}>
-                  <div style={{ display: 'flex', gap: '0.75rem', flex: 1, alignItems: 'center' }}>
+                <li key={index} className="song-item">
+                  <div className="song-meta">
                     <span style={{ color: 'var(--text-secondary)', minWidth: '1.5rem' }}>{index + 1}.</span>
                     <span style={{ flex: 1, wordBreak: 'break-word' }}>{song}</span>
                   </div>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <div className="song-actions">
                     <button
+                      className="icon-btn add"
+                      title="Add to playlist"
                       onClick={() => {
                         setSongToAddToPlaylist(song);
                         setSelectedPlaylistForSong('');
                       }}
-                      style={{
-                        padding: '0.4rem 0.75rem',
-                        backgroundColor: 'rgba(59, 130, 246, 0.2)',
-                        color: 'var(--text)',
-                        border: '1px solid rgba(59, 130, 246, 0.3)',
-                        borderRadius: '0.35rem',
-                        cursor: 'pointer',
-                        fontSize: '0.8rem',
-                        fontFamily: 'inherit',
-                        whiteSpace: 'nowrap',
-                        transition: 'all 0.2s ease'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.3)';
-                        e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.5)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.2)';
-                        e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.3)';
-                      }}
                     >
-                      + Add to Playlist
+                      ➕
                     </button>
                     <button
+                      className="icon-btn delete"
+                      title="Delete file"
                       onClick={() => handleDeleteCacheSong(song)}
-                      style={{
-                        padding: '0.4rem 0.75rem',
-                        backgroundColor: 'rgba(239, 68, 68, 0.2)',
-                        color: 'var(--danger)',
-                        border: '1px solid rgba(239, 68, 68, 0.3)',
-                        borderRadius: '0.35rem',
-                        cursor: 'pointer',
-                        fontSize: '0.8rem',
-                        fontFamily: 'inherit',
-                        whiteSpace: 'nowrap',
-                        transition: 'all 0.2s ease'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.3)';
-                        e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.5)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.2)';
-                        e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.3)';
-                      }}
                     >
-                      🗑️ Delete
+                      🗑️
                     </button>
                   </div>
                 </li>

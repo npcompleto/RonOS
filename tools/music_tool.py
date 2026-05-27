@@ -172,6 +172,38 @@ class MusicTool:
             self._set_currently_playing(None)
             return f"Errore download: {str(e)}"
 
+    def download(self, url):
+        """Scarica da un URL diretto senza riprodurre (interrompe playlist se attiva)."""
+        logger.debug(f"Scaricamento diretto di '{url}'...")
+        try:
+            ydl_opts = {
+                'format': 'bestaudio/best',
+                'outtmpl': f'{self.download_path}/%(title)s.%(ext)s',
+                'postprocessors': [{
+                    'key': 'FFmpegExtractAudio',
+                    'preferredcodec': 'mp3',
+                    'preferredquality': '192',
+                }],
+                'quiet': True,
+                'no_overwrites': True
+                # 'default_search' rimosso per forzare l'interpretazione come URL
+            }
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                
+                # Scarica direttamente
+                info = ydl.extract_info(url, download=True)
+                
+                # Se è un singolo video, info è il dizionario del video stesso
+                video_info = info
+                
+                filename = ydl.prepare_filename(video_info).rsplit('.', 1)[0] + ".mp3"
+                return filename
+                
+        except Exception as e:
+            em.publish("loading", {"message": f"Errore download: {str(e)}", "started": False})
+            self._set_currently_playing(None)
+            return None
+
     def _set_currently_playing(self, filename):
         """Imposta il nome del file del brano attualmente in riproduzione."""
         logger.info(f"Impostazione currently_playing: {filename}")
@@ -391,3 +423,6 @@ def get_music_progress():
 def get_cache_songs():
     """Restituisce la lista dei brani presenti nella cache (funzione esterna)."""
     return _music_instance.get_cached_songs()
+def download_music_external(url):
+    """Funzione esterna per scaricare musica da URL diretto senza riprodurre (es. da joystick)."""
+    return _music_instance.download(url)

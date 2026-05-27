@@ -92,3 +92,18 @@ export const deleteCacheSong = async (songName) => {
   }
   return response.json();
 };
+
+export const downloadCacheSong = async (url) => {
+  const response = await fetch(`${API_BASE_URL}/cache_songs/download`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ url }),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || 'Failed to download song');
+  }
+  return response.json();
+};

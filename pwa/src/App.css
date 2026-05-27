@@ -289,3 +289,58 @@
     transform: translateY(0);
   }
 }
+
+/* Song item styles (playlist + cache) */
+.song-item {
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.song-item:last-child {
+  border-bottom: none;
+}
+
+.song-meta {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex: 1;
+}
+
+.song-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: rgba(255,255,255,0.02);
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.icon-btn:hover { filter: brightness(1.05); }
+
+.icon-btn.add { background-color: rgba(59,130,246,0.12); color: var(--text); border-color: rgba(59,130,246,0.2); }
+.icon-btn.delete { background-color: rgba(239,68,68,0.08); color: var(--danger); border-color: rgba(239,68,68,0.12); }
+.icon-btn.remove { background-color: rgba(239,68,68,0.08); color: var(--danger); border-color: rgba(239,68,68,0.12); }
+
+/* Mobile: stack actions under song name and show icons only */
+@media (max-width: 600px) {
+  .song-item { flex-direction: column; align-items: stretch; gap: 0.5rem; }
+  .song-meta { width: 100%; }
+  .song-actions { width: 100%; justify-content: flex-end; }
+  .icon-btn { width: 40px; height: 40px; }
+}
