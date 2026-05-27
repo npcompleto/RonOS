@@ -177,6 +177,7 @@ def status_handler(old_state: State, new_state: State, reason: str) -> None:
     if new_state == State.IDLE and robot_face:
         robot_face.set_expression(Expression.NEUTRAL)
         robot_face.set_text("")
+        robot_face.set_progress(0, 0)
     elif new_state == State.DANCING and robot_face:
         robot_face.set_expression(Expression.DANCING)
         robot_face.set_text("🎶")

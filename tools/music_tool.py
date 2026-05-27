@@ -11,7 +11,7 @@ from langchain_core.tools import tool
 from event_manager import EventManager
 from status import get_global_status, State
 from mutagen.mp3 import MP3
-
+import re
 
 class MusicTool:
     def __init__(self):
@@ -121,7 +121,7 @@ class MusicTool:
             print(f"Filepath: {filepath}")
             pygame.mixer.music.load(filepath)
             pygame.mixer.music.play()
-            self._currently_playing = target_file
+            self._set_currently_playing(target_file)
             return target_file, f"In riproduzione dalla cache: {target_file}"
         return None, "Non trovato in cache."
 
@@ -160,7 +160,7 @@ class MusicTool:
                 
                 if get_global_status().set_state(State.DANCING, reason="Riproduzione musicale"):
                     em.publish("music", {"message": None, "started": True})
-                    self._currently_playing = filename
+                    self._set_currently_playing(filename)
                     pygame.mixer.music.play()
                     return f"Scaricato e in riproduzione: {video_info.get('title', 'Video')}"
                 else:
@@ -169,8 +169,13 @@ class MusicTool:
                     
         except Exception as e:
             em.publish("loading", {"message": f"Errore download: {str(e)}", "started": False})
-            self._currently_playing = None
+            self._set_currently_playing(None)
             return f"Errore download: {str(e)}"
+
+    def _set_currently_playing(self, filename):
+        """Imposta il nome del file del brano attualmente in riproduzione."""
+        logger.info(f"Impostazione currently_playing: {filename}")
+        self._currently_playing = filename
 
     def list_cached_songs(self):
         """Restituisce i titoli dei brani in cache che corrispondono alla query."""
@@ -203,6 +208,7 @@ class MusicTool:
             
         self._playlist = []
         self._current_index = 0
+        self._set_currently_playing(None)
         #get_global_status().set_state(State.IDLE, reason="Musica fermata")
         return "Musica e playlist fermate."
 
@@ -277,8 +283,12 @@ class MusicTool:
             audio = MP3(filepath)
             return audio.info.length
         except Exception as e:
-            logger.error(f"Errore lettura durata: {e}")
-            return 0
+            try:
+                audio = MP3(filename)
+                return audio.info.length
+            except Exception as e2:
+                logger.error(f"Errore lettura durata: {e2}")
+                return 0
 
     def get_playback_status(self):
         """Restituisce (durata_totale, tempo_trascorso) in secondi."""
@@ -357,7 +367,16 @@ def stop_music_external():
     return _music_instance.stop()
 
 def get_currently_playing():
-    """Restituisce il titolo del brano attualmente in riproduzione, se disponibile."""
+    """Restituisce il titolo del brano attualmente in riproduzione, se disponibile.
+    prendi solo il nome del file senza estensione e senza path e senza stringhe tra () o [] o {} e restituiscilo come titolo
+     - Esempio: "Canzone (feat. Artista) [Live].mp3" -> "Canzone"
+    """    
+    if _music_instance._currently_playing:
+        filename = os.path.basename(_music_instance._currently_playing)
+        title = filename.rsplit('.', 1)[0] if '.' in filename else filename
+        # Rimuove stringhe tra parentesi
+        title = re.sub(r"[\(\[\{].*?[\)\]\}]", "", title).strip()
+        return title
     return _music_instance._currently_playing
 
 def get_music_progress():
