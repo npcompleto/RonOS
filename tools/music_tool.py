@@ -362,6 +362,10 @@ def get_playlists():
     
 
 # Funzioni esterne per controllo da joystick o altri moduli
+
+def get_playlists_external():
+    return get_playlists.invoke({})
+
 def stop_music_external():
     """Funzione esterna per fermare la musica (es. da joystick)."""
     return _music_instance.stop()
@@ -383,3 +387,7 @@ def get_music_progress():
     """Restituisce lo stato della riproduzione attuale (durata totale e tempo trascorso)."""
     total, elapsed = _music_instance.get_playback_status()
     return {"total_seconds": total, "elapsed_seconds": elapsed}
+
+def get_cache_songs():
+    """Restituisce la lista dei brani presenti nella cache (funzione esterna)."""
+    return _music_instance.get_cached_songs()

@@ -57,7 +57,8 @@ echo "--- Database aggiornato. ---"
 
 echo "--- Avvio PWA WebApp... ---"
 cd pwa
-npm run dev > /dev/null 2>&1 &
+npm install --silent
+npm run dev > pwa_debug.log 2>&1 &
 PWA_PID=$!
 cd ..
 
