@@ -70,10 +70,27 @@ class MusicTool:
                 return None
         return None
 
-    def play_all_from_cache(self, shuffle=True):
+    def _get_playlist_songs(self, playlist_name):
+        """Legge un file di playlist e restituisce la lista dei brani."""
+        playlist_path = os.path.join(self.download_path, f"{playlist_name}_playlist.txt")
+        if os.path.exists(playlist_path):
+            with open(playlist_path, "r") as f:
+                songs = [line.strip() for line in f.readlines() if line.strip()]
+            return songs
+        return None
+
+    def play_all_from_cache(self, shuffle=True, playlist_name: str = None):
         """Avvia la riproduzione di tutti i brani in cache via Thread."""
         self.stop() # Ferma tutto il precedente
-        self._playlist = self.get_cached_songs()
+        if playlist_name:
+            logger.debug(f"Caricamento playlist '{playlist_name}'...")
+            songs = self._get_playlist_songs(playlist_name)
+            if songs:
+                self._playlist = songs
+            else:
+                logger.warning(f"Playlist '{playlist_name}' non trovata. Carico tutta la cache.")
+        else:
+            self._playlist = self.get_cached_songs()
         logger.debug(f"Playlist: {self._playlist}")
         if not self._playlist:
             return "Cache vuota."
@@ -287,9 +304,9 @@ def stop_music():
     return _music_instance.stop()
 
 @tool
-def play_cached_music(shuffle: bool = True):
+def play_cached_music(shuffle: bool = True, playlist_name: str = None):
     """Riproduce musica già presente nella cache, già ascoltata in precedenza."""
-    return _music_instance.play_all_from_cache(shuffle)
+    return _music_instance.play_all_from_cache(shuffle, playlist_name)
 
 @tool
 def list_cached_music():
@@ -309,8 +326,30 @@ def search_music(query, max_results: int = 20, only_cache: bool = False):
      - only_cache: se True, cerca solo nella cache locale senza accedere a online (default False)
      -return: lista di stringhe con i titoli dei brani trovati o messaggio di errore
     """
+    results = _music_instance.search_any(query, max_results, only_cache)
+    print(f"Risultati ricerca per '{query}' (only_cache={only_cache}): {results}")
+    return results
 
-    return _music_instance.search_any(query, max_results, only_cache)
+@tool
+def get_playlists():
+    """
+        Restituisce la lista delle playlist disponibili
+            - Restituisce una lista di oggetti {"name": nome_playlist, "path": path_completo, "songs": [lista_brani]}
+    """
+
+    #list files txt in dir MusicCacheDir e restituisci una lista di oggetti {"name": nome_file_senza_estensione, "path": path_completo} ordinata per nome
+    files = os.listdir(MUSIC_CACHE_DIR)
+    playlists = []
+    for filename in files:
+        logger.debug(f"Controllo file: {filename}")
+        if filename.endswith(".txt"):
+            logger.info(f"File playlist trovato: {filename}")
+            with open(os.path.join(MUSIC_CACHE_DIR, filename), "r") as f:
+                songs = [line.strip() for line in f.readlines() if line.strip()]
+            playlists.append({"name": filename[:-4].replace("_playlist", ""), "path": os.path.join(MUSIC_CACHE_DIR, filename), "songs": songs})
+
+    return playlists
+    
 
 # Funzioni esterne per controllo da joystick o altri moduli
 def stop_music_external():

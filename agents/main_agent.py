@@ -55,6 +55,7 @@ class MainAgent(BaseAgent):
                 "Quando ti chiede voti o compiti usa SEMPRE il tool school_agent, non recuperare le infomazioni dal prompt o dalla conversazione passata. Ad esempio: 'Quali sono i miei voti?' -> esegui tool school_agent -> rispondi con i voti recuperati",
                 "Quando l'utente chiede di ascoltare o fermare la musica o playlist, usa il tool music_agent",
                 "Quando l'utente chiede di ascoltare musica, dopo aver eseguito il tool, rispondi con '[[DANCING]] Ecco, Buon Ascolto', Importante! In questo caso non chiudere con [[NEUTRAL]]",
+                "Quando ti chiede informazioni sulle playlist o i brani musicali, usa il tool music_agent",
                 "REGOLE DI FORMATTAZIONE E PULIZIA DEL TESTO:",
                 "Non utilizzare MAI emoji (es. NO a 🇯🇵, 😊, 🚀, ecc.).",
                 "Non utilizzare caratteri speciali di formattazione come asterischi per il grassetto (es. NO a **Giappone**), trattini o elenchi puntati grafici, a meno che non sia strettamente indispensabile per la chiarezza del testo.",

@@ -222,3 +222,4 @@ tmp/**
 *.mp3
 agents/memory/**
 ronos.db
+music_cache/**
