@@ -11,6 +11,7 @@ from agents.memory_agent import MemoryAgent
 from integrations.telegram_bot import TelegramBot
 from integrations.rest_listener import RestListener
 from event_manager import EventManager
+import asyncio
 from jobs import JobScheduler, JobScheduleError
 from tools.school_tool import axios_sync, axios_rank_sync
 from tools.meteo_tool import run_sync_weekly_meteo
@@ -22,6 +23,7 @@ logger = config.logger
 robot_face = None
 assistant = None
 tts = None
+
 
 
 def status_monitor():
@@ -252,7 +254,13 @@ if __name__ == "__main__":
         scheduler.start()
 
         if telegram_bot:
-            telegram_bot.run()
+            telegram_thread = threading.Thread(
+                target=telegram_bot.run,
+                daemon=True
+            )
+            telegram_thread.start()
+            #telegram_bot.run()
+            asyncio.run(telegram_bot.send_message("Eccomi pronto, Capo!"))
 
         stt.wait()  # Blocca finché non viene interrotto con CTRL+C
     except KeyboardInterrupt:

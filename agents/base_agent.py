@@ -120,7 +120,7 @@ class BaseAgent:
         self.executor = AgentExecutor(
             agent=agent,
             tools=self.tools,
-            verbose=True,
+            verbose=False,
             handle_parsing_errors=True
         )
         

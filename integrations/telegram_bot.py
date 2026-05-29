@@ -84,11 +84,17 @@ class TelegramBot:
             print(f"Errore durante l'elaborazione del messaggio: {e}")
             await update.message.reply_text("Scusa, si è verificato un errore interno durante l'elaborazione della tua richiesta.")
 
+    async def send_message(self, message: str):
+        """Invia un messaggio all'utente"""
+        await self.app.bot.send_message(chat_id=self.allowed_chat_id, text=message)
+
     def run(self):
         """Avvia il polling del bot"""
         print("Avvio del bot Telegram in corso... Premi Ctrl+C per fermarlo.")
         self.app.run_polling(
             poll_interval=1.0,      # Tempo di attesa tra una richiesta e l'altra (in secondi)
             timeout=30,             # Timeout del Long Polling lato Telegram
-            bootstrap_retries=-1    # Tenta all'infinito se fallisce l'avvio iniziale (-1)
+            bootstrap_retries=-1,   # Tenta all'infinito se fallisce l'avvio iniziale (-1)
+            close_loop=False,
+            stop_signals=None
         )
