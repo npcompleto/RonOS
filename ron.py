@@ -7,6 +7,7 @@ import utils
 import time
 import threading
 from agents.main_agent import MainAgent
+from agents.memory_agent import MemoryAgent
 from integrations.telegram_bot import TelegramBot
 from integrations.rest_listener import RestListener
 from event_manager import EventManager
@@ -182,6 +183,11 @@ def status_handler(old_state: State, new_state: State, reason: str) -> None:
         robot_face.set_expression(Expression.DANCING)
         robot_face.set_text("🎶")
 
+def dreaming_job() -> None:
+    logger.info(f"Ron is dreaming....")
+    memory_agent = MemoryAgent()
+    memory_agent.agent.run("Consolida la memoria")
+
 if __name__ == "__main__":
    
     logger.info("Ron OS starting...")
@@ -242,6 +248,7 @@ if __name__ == "__main__":
         scheduler.add_job("axios_sync", axios_sync, interval="4h", run_immediately=True)
         scheduler.add_job("axios_rank_sync", axios_rank_sync, interval="1h", run_immediately=True)
         scheduler.add_job("sync_weekly_meteo", run_sync_weekly_meteo, interval="1d", run_immediately=True)
+        scheduler.add_job("dreaming", dreaming_job, interval="2h", run_immediately=True)
         scheduler.start()
 
         if telegram_bot:
