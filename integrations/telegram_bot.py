@@ -3,9 +3,10 @@ import asyncio
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 import re
+from config import logger
 
 class TelegramBot:
-    def __init__(self, agent_callback):
+    def __init__(self, agent_callback, post_init_callback):
         """
         Inizializza il bot Telegram.
         
@@ -24,7 +25,8 @@ class TelegramBot:
         self.agent_callback = agent_callback
         
         # Costruisci l'applicazione Telegram
-        self.app = ApplicationBuilder().token(self.token).build()
+        self.post_init = post_init_callback
+        self.app = ApplicationBuilder().token(self.token).post_init(self.post_init).build()
 
         # Registra i gestori degli eventi
         self.app.add_handler(CommandHandler("start", self.start_command))
@@ -84,13 +86,18 @@ class TelegramBot:
             print(f"Errore durante l'elaborazione del messaggio: {e}")
             await update.message.reply_text("Scusa, si è verificato un errore interno durante l'elaborazione della tua richiesta.")
 
-    async def send_message(self, message: str):
+    def send_message(self, message: str):
+        """Invia un messaggio all'utente"""
+        self.app.create_task(self._send_message(message))
+
+    async def _send_message(self, message: str):
         """Invia un messaggio all'utente"""
         await self.app.bot.send_message(chat_id=self.allowed_chat_id, text=message)
 
+
     def run(self):
         """Avvia il polling del bot"""
-        print("Avvio del bot Telegram in corso... Premi Ctrl+C per fermarlo.")
+        logger.info("Avvio del bot Telegram in corso... Premi Ctrl+C per fermarlo.")
         self.app.run_polling(
             poll_interval=1.0,      # Tempo di attesa tra una richiesta e l'altra (in secondi)
             timeout=30,             # Timeout del Long Polling lato Telegram

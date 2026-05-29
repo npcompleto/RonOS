@@ -190,6 +190,10 @@ def dreaming_job() -> None:
     memory_agent = MemoryAgent()
     memory_agent.agent.run("Consolida la memoria")
 
+async def post_init_telegram_bot(app):
+    logger.info("Telegram bot pronto")
+    telegram_bot.send_message("Eccomi pronto, Capo!")
+
 if __name__ == "__main__":
    
     logger.info("Ron OS starting...")
@@ -231,7 +235,7 @@ if __name__ == "__main__":
     
     # Inizializza e avvia il bot Telegram
     if "--no-telegram" not in sys.argv:
-        telegram_bot = TelegramBot(agent_callback=process_telegram_message)
+        telegram_bot = TelegramBot(agent_callback=process_telegram_message, post_init_callback=post_init_telegram_bot)
     else:
         telegram_bot = None
     
@@ -256,11 +260,9 @@ if __name__ == "__main__":
         if telegram_bot:
             telegram_thread = threading.Thread(
                 target=telegram_bot.run,
-                daemon=True
+                daemon=False
             )
             telegram_thread.start()
-            #telegram_bot.run()
-            asyncio.run(telegram_bot.send_message("Eccomi pronto, Capo!"))
 
         stt.wait()  # Blocca finché non viene interrotto con CTRL+C
     except KeyboardInterrupt:
