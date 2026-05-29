@@ -426,6 +426,15 @@ class RobotFaceManager:
                 if ev.type == pygame.KEYDOWN and ev.key == pygame.K_ESCAPE: running = False
                 if ev.type == pygame.MOUSEBUTTONDOWN or ev.type == pygame.FINGERDOWN:
                     conn.send(("CLICK", None))
+                # --- INTERCETTAZIONE MOVIMENTO MOUSE ---
+                if ev.type == pygame.MOUSEMOTION:
+                    # rel contiene lo spostamento (delta_x, delta_y) dall'ultimo frame
+                    _, rel_y = ev.rel
+                    
+                    if rel_y < 0:
+                        conn.send(("MOUSE_MOVE", "up"))
+                    elif rel_y > 0:
+                        conn.send(("MOUSE_MOVE", "down"))
             face._update(dt)
             face._draw()
             pygame.display.flip()
@@ -444,6 +453,7 @@ class RobotFaceManager:
                         if self._parent_conn.poll(0.1):
                             cmd, val = self._parent_conn.recv()
                             if cmd == "CLICK": em.publish("joystick", {"action": "click"})
+                            if cmd == "MOUSE_MOVE": em.publish("joystick", {"action": "mouse_move", "direction": val})
                     except: break
             threading.Thread(target=listen, daemon=True).start()
 

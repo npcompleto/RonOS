@@ -51,6 +51,9 @@ def status_monitor():
             logger.debug(f"CPU Temperature: {utils.get_cpu_temp()}°C")
             if robot_face:
                 robot_face.set_cpu_temp(utils.get_cpu_temp())
+
+            logger.info(f"Current Voice Volume: {utils.get_current_voice_volume()}")
+            logger.info(f"Current Music Volume: {utils.get_current_music_volume()}")
             time.sleep(1)
         except Exception as e:
             logger.error(f"Errore nel monitoraggio dello stato: {e}")
@@ -158,6 +161,12 @@ def joystick_handler(data: dict) -> None:
         if get_global_status().get_state() == State.DANCING:
             get_global_status().set_state(State.IDLE, reason="Musica fermata da Joystick")
         tts.stop_speaking()
+    if data["action"]=='mouse_move':
+        logger.info(f"Mouse moved: {data['direction']}")
+        if data['direction'] == 'up':
+            utils.increase_music_volume()
+        elif data['direction'] == 'down':
+            utils.decrease_music_volume()
             
 
 # Definiamo la funzione di callback per elaborare il messaggio

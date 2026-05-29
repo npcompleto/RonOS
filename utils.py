@@ -144,3 +144,53 @@ def get_cpu_temp():
             for entry in entries:
                 return entry.current
     return None
+
+def get_current_voice_volume():
+    """
+    Ritorna il volume corrente del canale vocale (0.0-1.0).
+    """
+    if not pygame.mixer.get_init():
+        return 0.0
+    return get_voice_channel().get_volume()
+
+def increase_voice_volume():
+    if not pygame.mixer.get_init():
+        return
+    current_volume = get_voice_channel().get_volume()
+    new_volume = min(current_volume + 0.1, 1.0)
+    get_voice_channel().set_volume(new_volume)
+
+def decrease_voice_volume():
+    if not pygame.mixer.get_init():
+        return
+    current_volume = get_voice_channel().get_volume()
+    new_volume = max(current_volume - 0.1, 0.0)
+    get_voice_channel().set_volume(new_volume)
+
+def get_current_music_volume():
+    """
+    Ritorna il volume corrente di pygame.mixer.music (0.0-1.0).
+    """
+    if not pygame.mixer.get_init():
+        return 0.0
+    return pygame.mixer.music.get_volume()
+
+def increase_music_volume():
+    """
+    Incrementa il volume di pygame.mixer.music (0.0-1.0).
+    """
+    if not pygame.mixer.get_init():
+        return
+    current_volume = pygame.mixer.music.get_volume()
+    new_volume = min(current_volume + 0.1, 1.0)
+    pygame.mixer.music.set_volume(new_volume)
+
+def decrease_music_volume():
+    """
+    Decrementa il volume di pygame.mixer.music (0.0-1.0).
+    """
+    if not pygame.mixer.get_init():
+        return
+    current_volume = pygame.mixer.music.get_volume()
+    new_volume = max(current_volume - 0.1, 0.0)
+    pygame.mixer.music.set_volume(new_volume)
