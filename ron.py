@@ -15,7 +15,7 @@ import asyncio
 from jobs import JobScheduler, JobScheduleError
 from tools.school_tool import axios_sync, axios_rank_sync
 from tools.meteo_tool import run_sync_weekly_meteo
-from tools.music_tool import stop_music_external, get_currently_playing,get_music_progress
+from tools.music_tool import stop_music_external, get_currently_playing,get_music_progress,get_current_lyrics_text
 from status import get_global_status, State, StateMachine
 
 logger = config.logger
@@ -39,6 +39,8 @@ def status_monitor():
                 current_song = get_currently_playing()
                 current_song = current_song.replace(".mp3", "").replace("_", " ").replace("(Official Video)", "").strip()
                 music_progress = get_music_progress()
+                music_lyrics =  get_current_lyrics_text()
+                logger.info(f"Music lyrics: {music_lyrics}")
                 robot_face.set_progress(music_progress['elapsed_seconds'], music_progress['total_seconds'])
                 logger.debug(f"Currently playing: {current_song} [{music_progress['elapsed_seconds']:.0f}/{music_progress['total_seconds']:.0f} sec]")
                 if robot_face and current_song:

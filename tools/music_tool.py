@@ -106,23 +106,6 @@ class MusicTool:
         self._playlist_thread = threading.Thread(target=self._playlist_worker, daemon=True)
         self._playlist_thread.start()
         return f"Playlist avviata ({len(self._playlist)} brani). In riproduzione: {title}"
-
-    def has_embedded_lyrics(url:str):
-        
-        if "http" in url:
-            return False #si tratta di un link youtube, dovremo scaricare la lyric
-        
-        tags = ID3(url)
-
-        # Lyrics sincronizzate
-        if tags.getall("SYLT"):
-            return True
-
-        # Lyrics non sincronizzate
-        if tags.getall("USLT"):
-            return True
-
-        return False
     
     # --- LOGICA RICERCA E DOWNLOAD ---
 
@@ -424,22 +407,36 @@ class MusicTool:
         filename = None
         if not self._currently_playing:
             logger.info("Nessuna canzone in riproduzione")
-            self._currently_playing.replace(".mp3", "")
             return None
+            #list files with same name but other extension
+        #logger.info(f"Canzone attuale: {self._currently_playing}")
+        for file in glob.glob(os.path.join(self.download_path, f"{self._currently_playing.replace('.mp3', '')}.*")):
+            logger.info(f"Trovato file {self._currently_playing} : {file}")
+            if os.path.exists(file) and ".mp3" not in file:
+                filename = file
+                logger.info(f"Trovato file {self._currently_playing} : {filename}")
+                break
+            
 
-        if not self._lyrics_events:
+        if not self._lyrics_events and filename:
             self._currently_playing
             with open(filename, "r", encoding="utf-8") as f:
                 data = json.load(f)
+                logger.info(f"Lyrics data: {data}")
                 self._lyrics_events = data["events"]
-            for event in self._lyrics_events:
-                start = event.get("tStartMs", 0)
-                duration = event.get("dDurationMs", 0)
-                end = start + duration
+                logger.info(f"Lyrics events: {self._lyrics_events}")
+        current_ms = self.get_playback_status()[1]*1000+5000 
+        logger.info(f"Current ms: {current_ms}")
+        for event in self._lyrics_events:
+            start = event.get("tStartMs", 0)
+            duration = event.get("dDurationMs", 0)
+            end = start + duration
+            
 
-                if start <= current_ms <= end:
-                    segs = event.get("segs", [])
-                    return "".join(seg.get("utf8", "") for seg in segs)
+            if start <= current_ms <= end and event.get("segs"):
+                logger.info(f"Lyrics event: {event}")
+                segs = event.get("segs", [])
+                return "".join(seg.get("utf8", "") for seg in segs)
 
         return None
 
@@ -537,5 +534,5 @@ def download_music_external(url):
     """Funzione esterna per scaricare musica da URL diretto senza riprodurre (es. da joystick)."""
     return _music_instance.download(url)
 
-def get_current_text():
+def get_current_lyrics_text():
     return _music_instance.get_current_text()
