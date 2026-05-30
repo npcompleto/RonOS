@@ -52,8 +52,8 @@ def status_monitor():
             if robot_face:
                 robot_face.set_cpu_temp(utils.get_cpu_temp())
 
-            logger.info(f"Current Voice Volume: {utils.get_current_voice_volume()}")
-            logger.info(f"Current Music Volume: {utils.get_current_music_volume()}")
+            logger.debug(f"Current Voice Volume: {utils.get_current_voice_volume()}")
+            logger.debug(f"Current Music Volume: {utils.get_current_music_volume()}")
             time.sleep(1)
         except Exception as e:
             logger.error(f"Errore nel monitoraggio dello stato: {e}")
