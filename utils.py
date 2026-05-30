@@ -2,6 +2,7 @@ import pygame
 import os
 import config
 import time
+import json
 import psutil
 # Canale dedicato per la riproduzione della voce/risposte del robot
 # Inizializzato a None, verrà assegnato dopo il mixer.init()

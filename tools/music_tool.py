@@ -5,7 +5,7 @@ import glob
 import random
 import threading
 import time
-import difflib
+import json
 from config import logger, MUSIC_CACHE_DIR
 from langchain_core.tools import tool
 from event_manager import EventManager
@@ -27,6 +27,7 @@ class MusicTool:
         self._stop_event = False
         self._playlist_thread = None
         self._currently_playing = None
+        self._lyrics_events = None
 
     def get_cached_songs(self):
         """Restituisce la lista dei file MP3 in cache."""
@@ -162,17 +163,78 @@ class MusicTool:
                 'no_overwrites': True,
                 #'writeautomaticsub': True,    # sottotitoli automatici
                 #'writesubtitles': True,
+                #'subtitleslangs': ['it'], 
                 #'subtitlesformat': "vtt",
-                #"cookiefile": "cookies.txt",
+                "cookiefile": "cookies.txt",
                 # 'default_search' rimosso per forzare l'interpretazione come URL
             }
+
+            language = None
+            caption_formats = []
+            filesize = 0
+            selected_format = None
+            try:
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    #Recuperiamo le informazione sul download
+                    info = ydl.extract_info(url, download=False)
+                    logger.info(info.keys())
+                    filesize = info.get("filesize")
+                    language = info.get("language")
+                    captions = info.get("automatic_captions").get(language)
+                    caption_formats = [c.get("ext") for c in captions]
+                    logger.info(f"{language}-{filesize}-{caption_formats}")
+                
+                
+                priority = [
+                    'json3',
+                    'srv3',
+                    'srv2',
+                    'srv1',
+                    'vtt',
+                    'ttml',
+                    'srt'
+                ]
+
+                selected_format = next(
+                    (fmt for fmt in priority if fmt in caption_formats),
+                    None
+                )
+            except Exception as e:
+                logger.error(e)
+            #Nuove options con quanto so
+
+            ydl_opts = {
+                'format': 'bestaudio/best',
+                'outtmpl': f'{self.download_path}/%(title)s.%(ext)s',
+                'postprocessors': [{
+                    'key': 'FFmpegExtractAudio',
+                    'preferredcodec': 'mp3',
+                    'preferredquality': '192',
+                }],
+                'quiet': True,
+                'no_overwrites': True,
+                "cookiefile": "cookies.txt"
+            }
+            
+            if selected_format:
+                ydl_opts['writeautomaticsub']=True
+                ydl_opts['writesubtitles']=True
+                ydl_opts['subtitleslangs']=[language]
+                ydl_opts['subtitlesformat']=selected_format
+                logger.info(f"Trovate lyrics {language} with format {selected_format}")
+            else:
+                logger.warning("impossibile trovare i sottotitoli per il video scelto.")
+
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 em.publish("downloading", {"message": f"Sto scaricando da {url}", "started": True})
                 
+                #Recuperiamo le informazione sul download
+                info = ydl.extract_info(url, download=False)
+
                 # Scarica direttamente
                 info = ydl.extract_info(url, download=True)
                 #logger.info(info.get("subtitles"))
-                #logger.info(info.get("automatic_captions"))
+                logger.info(info.get("automatic_captions").keys())
                 
                 # Se è un singolo video, info è il dizionario del video stesso
                 video_info = info
@@ -254,6 +316,7 @@ class MusicTool:
         em = EventManager()
         em.publish("music", {"message": None, "started": False})
         self._currently_playing = None
+        self._lyrics_events = None
         pygame.mixer.music.stop()
         pygame.mixer.music.unload()
         
@@ -357,6 +420,29 @@ class MusicTool:
         
         return total, elapsed
 
+    def get_current_text(self):
+        filename = None
+        if not self._currently_playing:
+            logger.info("Nessuna canzone in riproduzione")
+            self._currently_playing.replace(".mp3", "")
+            return None
+
+        if not self._lyrics_events:
+            self._currently_playing
+            with open(filename, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                self._lyrics_events = data["events"]
+            for event in self._lyrics_events:
+                start = event.get("tStartMs", 0)
+                duration = event.get("dDurationMs", 0)
+                end = start + duration
+
+                if start <= current_ms <= end:
+                    segs = event.get("segs", [])
+                    return "".join(seg.get("utf8", "") for seg in segs)
+
+        return None
+
 _music_instance = MusicTool()
 @tool
 def play_music(url):
@@ -450,3 +536,6 @@ def get_cache_songs():
 def download_music_external(url):
     """Funzione esterna per scaricare musica da URL diretto senza riprodurre (es. da joystick)."""
     return _music_instance.download(url)
+
+def get_current_text():
+    return _music_instance.get_current_text()
