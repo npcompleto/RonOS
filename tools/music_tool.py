@@ -11,6 +11,7 @@ from langchain_core.tools import tool
 from event_manager import EventManager
 from status import get_global_status, State
 from mutagen.mp3 import MP3
+from mutagen.id3 import ID3
 import re
 
 class MusicTool:
@@ -105,6 +106,23 @@ class MusicTool:
         self._playlist_thread.start()
         return f"Playlist avviata ({len(self._playlist)} brani). In riproduzione: {title}"
 
+    def has_embedded_lyrics(url:str):
+        
+        if "http" in url:
+            return False #si tratta di un link youtube, dovremo scaricare la lyric
+        
+        tags = ID3(url)
+
+        # Lyrics sincronizzate
+        if tags.getall("SYLT"):
+            return True
+
+        # Lyrics non sincronizzate
+        if tags.getall("USLT"):
+            return True
+
+        return False
+    
     # --- LOGICA RICERCA E DOWNLOAD ---
 
     def play_from_cache(self, url):
@@ -141,7 +159,11 @@ class MusicTool:
                     'preferredquality': '192',
                 }],
                 'quiet': True,
-                'no_overwrites': True
+                'no_overwrites': True,
+                #'writeautomaticsub': True,    # sottotitoli automatici
+                #'writesubtitles': True,
+                #'subtitlesformat': "vtt",
+                #"cookiefile": "cookies.txt",
                 # 'default_search' rimosso per forzare l'interpretazione come URL
             }
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -149,6 +171,8 @@ class MusicTool:
                 
                 # Scarica direttamente
                 info = ydl.extract_info(url, download=True)
+                #logger.info(info.get("subtitles"))
+                #logger.info(info.get("automatic_captions"))
                 
                 # Se è un singolo video, info è il dizionario del video stesso
                 video_info = info
@@ -281,7 +305,7 @@ class MusicTool:
                 'skip_download': True,           # Impedisce l'avvio del download dei file
             }
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                search_query = f"ytsearch{max_results}:{query}"
+                search_query = f"ytsearch{max_results}:{query} lyrics"
                 info = ydl.extract_info(search_query, download=False)
                 
                 if info and 'entries' in info:

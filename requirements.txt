@@ -23,3 +23,5 @@ uvicorn
 fastapi
 psutil
 mutagen
+sounddevice
+curl-cffi
