@@ -64,6 +64,7 @@ class MusicTool:
             if get_global_status().set_state(State.DANCING, reason="Riproduzione musicale (_play_current_file)"):
                 em.publish("music", {"message": filename, "started": True})
                 self._currently_playing = filename
+                self._lyrics_events = None #reset le lyrics di eventuali vecchi brani
                 pygame.mixer.music.play()
                 logger.info(f"In riproduzione dalla cache: {filename}")
                 return filename
@@ -127,12 +128,12 @@ class MusicTool:
             return target_file, f"In riproduzione dalla cache: {target_file}"
         return None, "Non trovato in cache."
 
-    def play_download(self, url):
+    def play_download(self, url, only_download=False):
         """Scarica da un URL diretto e riproduce (interrompe playlist se attiva)."""
         logger.debug(f"Scaricamento diretto di '{url}'...")
         em = EventManager()
         
-        self.stop()
+        if not only_download: self.stop()
         try:
             ydl_opts = {
                 'format': 'bestaudio/best',
@@ -144,8 +145,8 @@ class MusicTool:
                 }],
                 'quiet': True,
                 'no_overwrites': True,
-                #'writeautomaticsub': True,    # sottotitoli automatici
-                #'writesubtitles': True,
+                'writeautomaticsub': True,    # sottotitoli automatici
+                'writesubtitles': True,
                 #'subtitleslangs': ['it'], 
                 #'subtitlesformat': "vtt",
                 "cookiefile": "cookies.txt",
@@ -209,8 +210,7 @@ class MusicTool:
                 logger.warning("impossibile trovare i sottotitoli per il video scelto.")
 
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                em.publish("downloading", {"message": f"Sto scaricando da {url}", "started": True})
-                
+                if not only_download: em.publish("downloading", {"message": f"Sto scaricando da {url}", "started": True})
                 #Recuperiamo le informazione sul download
                 info = ydl.extract_info(url, download=False)
 
@@ -223,55 +223,25 @@ class MusicTool:
                 video_info = info
                 
                 filename = ydl.prepare_filename(video_info).rsplit('.', 1)[0] + ".mp3"
-                em.publish("downloading", {"message": None, "started": False})
+                if not only_download: em.publish("downloading", {"message": None, "started": False})
                 
-                pygame.mixer.music.load(filename)
-                
-                if get_global_status().set_state(State.DANCING, reason="Riproduzione musicale"):
-                    em.publish("music", {"message": None, "started": True})
-                    self._set_currently_playing(filename)
-                    pygame.mixer.music.play()
-                    return f"Scaricato e in riproduzione: {video_info.get('title', 'Video')}"
+                if not only_download: pygame.mixer.music.load(filename)
+                if not only_download: 
+                    if get_global_status().set_state(State.DANCING, reason="Riproduzione musicale"):
+                        em.publish("music", {"message": None, "started": True})
+                        self._set_currently_playing(filename)
+                        pygame.mixer.music.play()
+                        return f"Scaricato e in riproduzione: {video_info.get('title', 'Video')}"
+                    else:
+                        logger.warning("Impossibile riprodurre la musica.")
+                        return "Musica scaricata ma non posso riprodurla in questo momento."
                 else:
-                    logger.warning("Impossibile riprodurre la musica.")
-                    return "Musica scaricata ma non posso riprodurla in questo momento."
+                    return f"Scaricato: {video_info.get('title', 'Video')}" 
                     
         except Exception as e:
-            em.publish("loading", {"message": f"Errore download: {str(e)}", "started": False})
-            self._set_currently_playing(None)
+            if not only_download: em.publish("loading", {"message": f"Errore download: {str(e)}", "started": False})
+            if not only_download: self._set_currently_playing(None)
             return f"Errore download: {str(e)}"
-
-    def download(self, url):
-        """Scarica da un URL diretto senza riprodurre (interrompe playlist se attiva)."""
-        logger.debug(f"Scaricamento diretto di '{url}'...")
-        try:
-            ydl_opts = {
-                'format': 'bestaudio/best',
-                'outtmpl': f'{self.download_path}/%(title)s.%(ext)s',
-                'postprocessors': [{
-                    'key': 'FFmpegExtractAudio',
-                    'preferredcodec': 'mp3',
-                    'preferredquality': '192',
-                }],
-                'quiet': True,
-                'no_overwrites': True
-                # 'default_search' rimosso per forzare l'interpretazione come URL
-            }
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                
-                # Scarica direttamente
-                info = ydl.extract_info(url, download=True)
-                
-                # Se è un singolo video, info è il dizionario del video stesso
-                video_info = info
-                
-                filename = ydl.prepare_filename(video_info).rsplit('.', 1)[0] + ".mp3"
-                return filename
-                
-        except Exception as e:
-            em.publish("loading", {"message": f"Errore download: {str(e)}", "started": False})
-            self._set_currently_playing(None)
-            return None
 
     def _set_currently_playing(self, filename):
         """Imposta il nome del file del brano attualmente in riproduzione."""
@@ -532,7 +502,7 @@ def get_cache_songs():
     return _music_instance.get_cached_songs()
 def download_music_external(url):
     """Funzione esterna per scaricare musica da URL diretto senza riprodurre (es. da joystick)."""
-    return _music_instance.download(url)
+    return _music_instance.play_download(url, only_download=True)
 
 def get_current_lyrics_text():
     return _music_instance.get_current_text()

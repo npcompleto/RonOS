@@ -51,12 +51,23 @@ class RobotFace:
         self.heart_path = os.path.join("display", "assets", "heart.svg")
         self.heart_original = None
         if os.path.exists(self.heart_path):
-            try: self.heart_original = pygame.image.load(self.heart_path).convert_alpha()
-            except: pass
+            try: 
+                self.heart_original = pygame.image.load(self.heart_path).convert_alpha()
+            except Exception as e:
+                print(f"Errore caricamento {self.heart_path}: {e}")
 
         self._font = pygame.font.SysFont("Arial", int(self._ref * 0.045), bold=False)
+        self._sub_font = pygame.font.SysFont(
+            "Arial",
+            int(self._ref * 0.032),
+            bold=False
+        )
         self._current_text = ""
         self._wrapped_lines = [] 
+        self._sub_text = ""
+        self._wrapped_sub_lines = []
+
+        
 
         # Stato
         self._expression = Expression.NEUTRAL
@@ -114,6 +125,30 @@ class RobotFace:
             lines.append(' '.join(current_line))
         return lines
 
+    def _wrap_sub_text(self, text, max_width):
+        words = text.split(' ')
+        lines = []
+        current_line = []
+
+        for word in words:
+            test_line = ' '.join(current_line + [word])
+            w, _ = self._sub_font.size(test_line)
+
+            if w <= max_width:
+                current_line.append(word)
+            else:
+                if current_line:
+                    lines.append(' '.join(current_line))
+                    current_line = [word]
+                else:
+                    lines.append(word)
+                    current_line = []
+
+        if current_line:
+            lines.append(' '.join(current_line))
+
+        return lines
+
     def set_text(self, text):
         self._current_text = text if text else ""
         if not self._current_text:
@@ -125,6 +160,28 @@ class RobotFace:
         self._wrapped_lines = []
         for rl in raw_lines:
             self._wrapped_lines.extend(self._wrap_text(rl, max_w_px))
+
+    def set_sub_text(self, text):
+        """
+        Imposta un testo secondario mostrato in un box sopra
+        la barra progresso. Max 3 righe.
+        """
+        self._sub_text = text if text else ""
+
+        if not self._sub_text:
+            self._wrapped_sub_lines = []
+            return
+
+        max_w_px = self.width * 0.72
+
+        raw_lines = self._sub_text.split('\n')
+        wrapped = []
+
+        for rl in raw_lines:
+            wrapped.extend(self._wrap_sub_text(rl, max_w_px))
+
+        # massimo 3 righe
+        self._wrapped_sub_lines = wrapped[:3]
 
     def set_wifi_level(self, percentage: float):
         """Imposta il livello del segnale wifi (0.0 a 1.0 o 0 a 100)."""
@@ -298,6 +355,52 @@ class RobotFace:
                 y_pos = start_y + (i * line_height)
                 txt_rect = txt_surf.get_rect(center=(self.width // 2, y_pos))
                 self.screen.blit(txt_surf, txt_rect)
+        
+        # Sub text box sopra progress bar
+        if self._wrapped_sub_lines:
+            box_w = int(self.width * 0.78)
+            box_h = int(self._ref * 0.18)
+            box_x = (self.width - box_w) // 2
+            box_y = int(self.height * 0.58)
+
+            # Sfondo semi trasparente
+            box_surface = pygame.Surface((box_w, box_h), pygame.SRCALPHA)
+            pygame.draw.rect(
+                box_surface,
+                (25, 25, 40, 220),
+                (0, 0, box_w, box_h),
+                border_radius=16
+            )
+
+            # Bordo
+            pygame.draw.rect(
+                box_surface,
+                (70, 70, 100, 255),
+                (0, 0, box_w, box_h),
+                width=2,
+                border_radius=16
+            )
+
+            self.screen.blit(box_surface, (box_x, box_y))
+
+            # Disegno testo centrato
+            line_height = self._sub_font.get_linesize()
+            total_h = len(self._wrapped_sub_lines) * line_height
+
+            text_y = box_y + (box_h - total_h) // 2
+
+            for i, line in enumerate(self._wrapped_sub_lines):
+                txt = self._sub_font.render(line, True, self.eye_color)
+
+                txt_rect = txt.get_rect(
+                    center=(
+                        self.width // 2,
+                        text_y + i * line_height
+                    )
+                )
+
+                self.screen.blit(txt, txt_rect)
+
 
         if self._show_progress and self._progress_total > 0:
             pct = min(1.0, self._progress_current / self._progress_total)
@@ -417,7 +520,8 @@ class RobotFaceManager:
                 elif cmd == "SPEAK": face._speaking = val
                 elif cmd == "NOD": face.start_nod()
                 elif cmd == "TEXT": face.set_text(val)
-                elif cmd == "WIFI": face.set_wifi_level(val)  # <--- GESTIONE COMANDO WIFI
+                elif cmd == "SUB_TEXT": face.set_sub_text(val)
+                elif cmd == "WIFI": face.set_wifi_level(val)
                 elif cmd == "TEMP": face._cpu_temp = val
                 elif cmd == "STOP": running = False
                 elif cmd == "PROGRESS": face.set_progress(val[0], val[1])
@@ -429,12 +533,16 @@ class RobotFaceManager:
                 # --- INTERCETTAZIONE MOVIMENTO MOUSE ---
                 if ev.type == pygame.MOUSEMOTION:
                     # rel contiene lo spostamento (delta_x, delta_y) dall'ultimo frame
-                    _, rel_y = ev.rel
+                    rel_x, rel_y = ev.rel
                     
                     if rel_y < 0:
                         conn.send(("MOUSE_MOVE", "up"))
                     elif rel_y > 0:
                         conn.send(("MOUSE_MOVE", "down"))
+                    elif rel_x < 0:
+                        conn.send(("MOUSE_MOVE", "left"))
+                    elif rel_x > 0:
+                        conn.send(("MOUSE_MOVE", "right"))
             face._update(dt)
             face._draw()
             pygame.display.flip()
@@ -465,10 +573,11 @@ class RobotFaceManager:
     def set_expression(self, expr: Expression): self._parent_conn.send(("EXPR", expr))
     def set_speaking(self, status: bool): self._parent_conn.send(("SPEAK", status))
     def set_text(self, text: str): self._parent_conn.send(("TEXT", text))
-    def set_wifi_level(self, percentage: float): self._parent_conn.send(("WIFI", percentage)) # <--- NUOVO METODO MANAGER
+    def set_wifi_level(self, percentage: float): self._parent_conn.send(("WIFI", percentage))
     def set_cpu_temp(self, t): self._parent_conn.send(("TEMP", t))
     def nod(self): self._parent_conn.send(("NOD", None))
     def set_progress(self, current, total): self._parent_conn.send(("PROGRESS", (current, total)))
+    def set_sub_text(self, text: str): self._parent_conn.send(("SUB_TEXT", text))
 
 if __name__ == "__main__":
     manager = RobotFaceManager(fullscreen=False)
@@ -476,16 +585,21 @@ if __name__ == "__main__":
     try:
         manager.set_expression(Expression.HAPPY)
         manager.set_text("Segnale Ottimo!")
-        manager.set_wifi_level(1.0) # 100% (Accende tutte e 6 le barre)
+        manager.set_wifi_level(1.0)
         time.sleep(3)
         
         manager.set_expression(Expression.THOUGHTFUL)
         manager.set_text("Segnale scarso...")
-        manager.set_wifi_level(0.30) # 30% (Accende circa 2 barre su 6)
+        manager.set_wifi_level(0.30)
         time.sleep(3)
         
         manager.set_text("Nessun Segnale")
-        manager.set_wifi_level(0.0) # 0% (Tutto spento/scuro)
+        manager.set_wifi_level(0.0)
+
+        manager.set_sub_text(
+            "Scaricamento modello AI in corso.\n"
+            "Attendere qualche secondo."
+        )
         time.sleep(2)
     except KeyboardInterrupt: pass
     finally: manager.stop()

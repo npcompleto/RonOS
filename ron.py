@@ -24,7 +24,7 @@ robot_face = None
 assistant = None
 tts = None
 
-
+lyrics_rows = []
 
 def status_monitor():
     while True:
@@ -39,12 +39,23 @@ def status_monitor():
                 current_song = get_currently_playing()
                 current_song = current_song.replace(".mp3", "").replace("_", " ").replace("(Official Video)", "").strip()
                 music_progress = get_music_progress()
-                music_lyrics =  get_current_lyrics_text()
-                logger.info(f"Music lyrics: {music_lyrics}")
+                
                 robot_face.set_progress(music_progress['elapsed_seconds'], music_progress['total_seconds'])
+                
+                music_lyrics =  get_current_lyrics_text()
+                if music_lyrics:
+                    logger.info(f"Music lyrics: {music_lyrics}")
+                    if not music_lyrics in lyrics_rows:
+                        lyrics_rows.append(music_lyrics)
+                        if len(lyrics_rows) > 3:
+                            lyrics_rows.pop(0)
+                        robot_face.set_sub_text("\n".join(lyrics_rows))
                 logger.debug(f"Currently playing: {current_song} [{music_progress['elapsed_seconds']:.0f}/{music_progress['total_seconds']:.0f} sec]")
                 if robot_face and current_song:
                     robot_face.set_text(current_song)
+            else:
+                lyrics_rows.clear()
+                
             
             logger.debug(f"Wi-Fi Link Quality: {utils.get_wifi_strength()}%")
             if robot_face:
@@ -155,7 +166,7 @@ def message_handler(data: dict) -> None:
             tts.speak(response)
 
 def joystick_handler(data: dict) -> None:
-    logger.info(f"Joystick event received: {data}")
+    logger.debug(f"Joystick event received: {data}")
     if data["action"]=='click':
         if utils.is_playing_music():
             stop_music_external()
@@ -164,7 +175,7 @@ def joystick_handler(data: dict) -> None:
             get_global_status().set_state(State.IDLE, reason="Musica fermata da Joystick")
         tts.stop_speaking()
     if data["action"]=='mouse_move':
-        logger.info(f"Mouse moved: {data['direction']}")
+        logger.debug(f"Mouse moved: {data['direction']}")
         if data['direction'] == 'up':
             utils.increase_music_volume()
         elif data['direction'] == 'down':
@@ -192,6 +203,7 @@ def status_handler(old_state: State, new_state: State, reason: str) -> None:
         robot_face.set_expression(Expression.NEUTRAL)
         robot_face.set_text("")
         robot_face.set_progress(0, 0)
+        robot_face.set_sub_text("")
     elif new_state == State.DANCING and robot_face:
         robot_face.set_expression(Expression.DANCING)
         robot_face.set_text("🎶")
