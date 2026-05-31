@@ -539,3 +539,28 @@
     font-size: 1.25rem;
   }
 }
+
+/* ==== Lyrics Badge Styling ==== */
+.lyrics-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: rgba(52, 211, 153, 0.15); /* Light glassmorphic emerald green */
+  border: 1px solid rgba(52, 211, 153, 0.3);
+  color: #34d399; /* Emerald green text */
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.15rem 0.45rem;
+  border-radius: 9999px;
+  margin-left: 0.5rem;
+  vertical-align: middle;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  box-shadow: 0 2px 8px rgba(52, 211, 153, 0.1);
+  transition: all 0.2s ease;
+}
+
+.lyrics-badge:hover {
+  background: rgba(52, 211, 153, 0.25);
+  transform: scale(1.05);
+}

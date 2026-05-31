@@ -56,6 +56,14 @@ export const fetchCacheSongs = async () => {
   return response.json();
 };
 
+export const fetchLyricsStatus = async (songName) => {
+  const response = await fetch(`${API_BASE_URL}/songs/lyrics?song_name=${encodeURIComponent(songName)}`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch lyrics status');
+  }
+  return response.json();
+};
+
 export const removeSongFromPlaylist = async (playlistName, songName) => {
   const response = await fetch(
     `${API_BASE_URL}/playlists/${encodeURIComponent(playlistName)}/songs/${encodeURIComponent(songName)}`,

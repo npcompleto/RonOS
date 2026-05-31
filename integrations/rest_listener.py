@@ -86,6 +86,57 @@ async def list_cache_songs():
     songs = get_cache_songs()
     return {"songs": songs if songs else []}
 
+@app.get("/api/songs/lyrics")
+async def check_song_lyrics(song_name: str):
+    """
+    Verifica se sono presenti le lyrics per una canzone e in che lingua sono.
+    """
+    if not song_name.strip():
+        raise HTTPException(status_code=400, detail="Il nome della canzone non può essere vuoto")
+    
+    # Estraiamo solo il nome del file per evitare directory traversal ed essere robusti con i path completi
+    song_filename = os.path.basename(song_name)
+    
+    # Rimuove l'estensione .mp3 se presente
+    base_name = song_filename
+    if base_name.lower().endswith(".mp3"):
+        base_name = base_name[:-4]
+    
+    # Verifica se esiste il file mp3 della canzone nella cache
+    mp3_exists = os.path.exists(os.path.join(MUSIC_CACHE_DIR, f"{base_name}.mp3"))
+    
+    # Cerca file di lyrics con estensione .json3
+    # Esempio: base_name.it.json3
+    try:
+        if os.path.exists(MUSIC_CACHE_DIR):
+            files = os.listdir(MUSIC_CACHE_DIR)
+        else:
+            files = []
+    except Exception as e:
+        logger.error(f"Errore nella lettura della cache directory: {e}")
+        raise HTTPException(status_code=500, detail=f"Errore interno del server: {str(e)}")
+    
+    prefix = base_name + "."
+    suffix = ".json3"
+    
+    matching_files = [f for f in files if f.startswith(prefix) and f.endswith(suffix)]
+    
+    languages = []
+    for f in matching_files:
+        lang = f[len(prefix):-len(suffix)]
+        if lang:
+            languages.append(lang)
+            
+    lyrics_exists = len(languages) > 0
+    
+    return {
+        "song_name": song_name,
+        "song_exists": mp3_exists,
+        "lyrics_exists": lyrics_exists,
+        "languages": languages,
+        "language": languages[0] if lyrics_exists else None
+    }
+
 @app.get("/api/playlists")
 async def list_playlists():
     playlists_dir = MUSIC_CACHE_DIR

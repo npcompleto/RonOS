@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { fetchPlaylists, createPlaylist, deletePlaylist, fetchCacheSongs, removeSongFromPlaylist, addSongToPlaylist, deleteCacheSong, downloadCacheSong } from '../api';
+import { fetchPlaylists, createPlaylist, deletePlaylist, fetchCacheSongs, removeSongFromPlaylist, addSongToPlaylist, deleteCacheSong, downloadCacheSong, fetchLyricsStatus } from '../api';
 import { logger } from '../logger';
 
 export default function Playlist({ onBack }) {
   const [playlists, setPlaylists] = useState([]);
   const [cacheSongs, setCacheSongs] = useState([]);
+  const [lyricsStatus, setLyricsStatus] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -42,8 +43,24 @@ export default function Playlist({ onBack }) {
     try {
       logger.debug('Fetching cache songs');
       const data = await fetchCacheSongs();
-      setCacheSongs(data.songs || []);
-      logger.info(`Loaded ${data.songs?.length || 0} cache songs`);
+      const songs = data.songs || [];
+      setCacheSongs(songs);
+      logger.info(`Loaded ${songs.length} cache songs`);
+
+      // Carica in parallelo lo stato delle lyrics per ciascun brano
+      const statusMap = {};
+      await Promise.all(songs.map(async (song) => {
+        try {
+          const status = await fetchLyricsStatus(song);
+          statusMap[song] = {
+            exists: status.lyrics_exists,
+            language: status.language
+          };
+        } catch (err) {
+          logger.error(`Failed to check lyrics for ${song}: ${err.message}`);
+        }
+      }));
+      setLyricsStatus(statusMap);
     } catch (err) {
       logger.error(`Failed to load cache songs: ${err.message}`);
     }
@@ -245,7 +262,14 @@ export default function Playlist({ onBack }) {
                           <li key={index} className="song-item">
                             <div className="song-meta">
                               <span className="song-number">{index + 1}.</span>
-                              <span className="song-name">{song}</span>
+                              <span className="song-name">
+                                {song}
+                                {lyricsStatus[song]?.exists && (
+                                  <span className="lyrics-badge" title={`Lyrics available in ${lyricsStatus[song].language?.toUpperCase() || 'unknown'}`}>
+                                    📝 {lyricsStatus[song].language?.toUpperCase()}
+                                  </span>
+                                )}
+                              </span>
                             </div>
                             <div className="song-actions">
                               <button
@@ -305,7 +329,14 @@ export default function Playlist({ onBack }) {
                 <li key={index} className="song-item">
                   <div className="song-meta">
                     <span className="song-number">{index + 1}.</span>
-                    <span className="song-name">{song}</span>
+                    <span className="song-name">
+                      {song}
+                      {lyricsStatus[song]?.exists && (
+                        <span className="lyrics-badge" title={`Lyrics available in ${lyricsStatus[song].language?.toUpperCase() || 'unknown'}`}>
+                          📝 {lyricsStatus[song].language?.toUpperCase()}
+                        </span>
+                      )}
+                    </span>
                   </div>
                   <div className="song-actions">
                     <button
