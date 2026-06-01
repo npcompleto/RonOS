@@ -57,6 +57,7 @@ class MusicTool:
 
     def _play_current_file(self):
         """Carica e suona il brano all'indice corrente della playlist."""
+        self._lyrics_events = None #reset le lyrics di eventuali vecchi brani
         if 0 <= self._current_index < len(self._playlist):
             filename = self._playlist[self._current_index]
             filepath = os.path.join(self.download_path, filename)
@@ -77,6 +78,7 @@ class MusicTool:
     def _get_playlist_songs(self, playlist_name):
         """Legge un file di playlist e restituisce la lista dei brani."""
         playlist_path = os.path.join(self.download_path, f"{playlist_name}_playlist.txt")
+        self._lyrics_events = None #reset le lyrics di eventuali vecchi brani
         if os.path.exists(playlist_path):
             with open(playlist_path, "r") as f:
                 songs = [line.strip() for line in f.readlines() if line.strip()]
@@ -135,6 +137,7 @@ class MusicTool:
         print(f"Ricerca '{url}' in cache...")
         target_file = os.path.basename(url)
         print(f"Target file: {target_file}")
+        self._lyrics_events = None #reset le lyrics di eventuali vecchi brani
         if target_file:
             filepath = os.path.join(self.download_path, target_file)
             print(f"Filepath: {filepath}")
