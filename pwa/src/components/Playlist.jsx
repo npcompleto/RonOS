@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { fetchPlaylists, createPlaylist, deletePlaylist, fetchCacheSongs, removeSongFromPlaylist, addSongToPlaylist, deleteCacheSong, downloadCacheSong, fetchLyricsStatus } from '../api';
+import { fetchPlaylists, createPlaylist, deletePlaylist, fetchCacheSongs, removeSongFromPlaylist, addSongToPlaylist, deleteCacheSong, downloadCacheSong, fetchLyricsStatus, saveLyrics } from '../api';
 import { logger } from '../logger';
 
 export default function Playlist({ onBack }) {
@@ -7,6 +7,11 @@ export default function Playlist({ onBack }) {
   const [cacheSongs, setCacheSongs] = useState([]);
   const [lyricsStatus, setLyricsStatus] = useState({});
   const [loading, setLoading] = useState(true);
+  
+  const [songForLyrics, setSongForLyrics] = useState(null);
+  const [lyricsText, setLyricsText] = useState('');
+  const [isSavingLyrics, setIsSavingLyrics] = useState(false);
+  const [isLoadingLyrics, setIsLoadingLyrics] = useState(false);
   const [error, setError] = useState(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState('');
@@ -165,6 +170,41 @@ export default function Playlist({ onBack }) {
     }
   };
 
+  const handleOpenLyricsModal = async (songName) => {
+    setSongForLyrics(songName);
+    setLyricsText('');
+    setIsLoadingLyrics(true);
+    try {
+      logger.info(`Fetching lyrics for: ${songName}`);
+      const status = await fetchLyricsStatus(songName);
+      if (status.lyrics_text) {
+        setLyricsText(status.lyrics_text);
+      }
+    } catch (err) {
+      logger.error(`Failed to load lyrics: ${err.message}`);
+    } finally {
+      setIsLoadingLyrics(false);
+    }
+  };
+
+  const handleSaveLyrics = async () => {
+    if (!songForLyrics) return;
+    try {
+      setIsSavingLyrics(true);
+      logger.info(`Saving lyrics for: ${songForLyrics}`);
+      await saveLyrics(songForLyrics, lyricsText);
+      logger.info('Lyrics saved successfully');
+      setSongForLyrics(null);
+      setLyricsText('');
+      await loadCacheSongs();
+    } catch (err) {
+      logger.error(`Failed to save lyrics: ${err.message}`);
+      setError(err.message);
+    } finally {
+      setIsSavingLyrics(false);
+    }
+  };
+
   if (loading) return (
     <div className="fade-in">
       <button className="back-btn mb-4" onClick={onBack}>← Back to Home</button>
@@ -273,6 +313,13 @@ export default function Playlist({ onBack }) {
                             </div>
                             <div className="song-actions">
                               <button
+                                className="icon-btn edit-lyrics"
+                                title="Edit lyrics"
+                                onClick={() => handleOpenLyricsModal(song)}
+                              >
+                                ✍️
+                              </button>
+                              <button
                                 className="icon-btn remove"
                                 title="Remove from playlist"
                                 onClick={() => handleRemoveSongFromPlaylist(playlist.name, song)}
@@ -339,6 +386,13 @@ export default function Playlist({ onBack }) {
                     </span>
                   </div>
                   <div className="song-actions">
+                    <button
+                      className="icon-btn edit-lyrics"
+                      title="Edit lyrics"
+                      onClick={() => handleOpenLyricsModal(song)}
+                    >
+                      ✍️
+                    </button>
                     <button
                       className="icon-btn add"
                       title="Add to playlist"
@@ -432,6 +486,52 @@ export default function Playlist({ onBack }) {
                 onClick={() => setDeleteConfirm(null)}
               >
                 Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {songForLyrics && (
+        <div className="modal-overlay">
+          <div className="glass-panel modal-content" style={{ maxWidth: '600px', width: '90%' }}>
+            <h3>Edit Lyrics (.lrc)</h3>
+            <p className="subtitle">
+              Song: <strong>{songForLyrics}</strong>
+            </p>
+            
+            {isLoadingLyrics ? (
+              <div style={{ display: 'flex', justifyContent: 'center', margin: '2rem 0' }}>
+                <span className="subtitle">Loading existing lyrics...</span>
+              </div>
+            ) : (
+              <textarea
+                className="lyrics-textarea"
+                placeholder="Insert lyrics here... E.g.&#10;[00:12.00]First line of the song&#10;[00:15.50]Second line..."
+                value={lyricsText}
+                onChange={(e) => setLyricsText(e.target.value)}
+                disabled={isSavingLyrics}
+                autoFocus
+              />
+            )}
+
+            <div className="modal-buttons">
+              <button
+                onClick={() => {
+                  setSongForLyrics(null);
+                  setLyricsText('');
+                }}
+                className="btn-secondary"
+                disabled={isSavingLyrics}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveLyrics}
+                className="btn-primary"
+                disabled={isSavingLyrics || isLoadingLyrics}
+              >
+                {isSavingLyrics ? 'Saving...' : 'Save Lyrics'}
               </button>
             </div>
           </div>

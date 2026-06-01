@@ -4,7 +4,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from event_manager import EventManager
 from config import logger, MUSIC_CACHE_DIR
-from tools.music_tool import get_playlists_external, get_cache_songs, download_music_external
+from tools.music_tool import get_playlists_external, get_cache_songs, download_music_external, add_lyrics_external
 
 from fastapi.middleware.cors import CORSMiddleware
 import os
@@ -27,6 +27,10 @@ class MessageRequest(BaseModel):
 
 class PlaylistRequest(BaseModel):
     name: str
+
+class AddLyricsRequest(BaseModel):
+    song_name: str
+    lrc_text: str
 
 class LogRequest(BaseModel):
     level: str  # DEBUG, INFO, WARNING, ERROR
@@ -89,7 +93,7 @@ async def list_cache_songs():
 @app.get("/api/songs/lyrics")
 async def check_song_lyrics(song_name: str):
     """
-    Verifica se sono presenti le lyrics per una canzone e in che lingua sono.
+    Verifica se sono presenti le lyrics per una canzone (file .lrc o .json3) e in che lingua sono/le restituisce.
     """
     if not song_name.strip():
         raise HTTPException(status_code=400, detail="Il nome della canzone non può essere vuoto")
@@ -105,8 +109,6 @@ async def check_song_lyrics(song_name: str):
     # Verifica se esiste il file mp3 della canzone nella cache
     mp3_exists = os.path.exists(os.path.join(MUSIC_CACHE_DIR, f"{base_name}.mp3"))
     
-    # Cerca file di lyrics con estensione .json3
-    # Esempio: base_name.it.json3
     try:
         if os.path.exists(MUSIC_CACHE_DIR):
             files = os.listdir(MUSIC_CACHE_DIR)
@@ -116,17 +118,31 @@ async def check_song_lyrics(song_name: str):
         logger.error(f"Errore nella lettura della cache directory: {e}")
         raise HTTPException(status_code=500, detail=f"Errore interno del server: {str(e)}")
     
+    # 1. Controlla se esiste il file .lrc diretto
+    lrc_exists = f"{base_name}.lrc" in files
+    lrc_text = ""
+    if lrc_exists:
+        lrc_path = os.path.join(MUSIC_CACHE_DIR, f"{base_name}.lrc")
+        try:
+            with open(lrc_path, "r", encoding="utf-8") as f:
+                lrc_text = f.read()
+        except Exception as e:
+            logger.error(f"Errore nella lettura del file LRC: {e}")
+            
+    # 2. Controlla se esistono file .json3 con prefisso lingua
     prefix = base_name + "."
     suffix = ".json3"
-    
-    matching_files = [f for f in files if f.startswith(prefix) and f.endswith(suffix)]
+    matching_json3_files = [f for f in files if f.startswith(prefix) and f.endswith(suffix)]
     
     languages = []
-    for f in matching_files:
+    for f in matching_json3_files:
         lang = f[len(prefix):-len(suffix)]
         if lang:
             languages.append(lang)
             
+    if lrc_exists:
+        languages.append("lrc")
+        
     lyrics_exists = len(languages) > 0
     
     return {
@@ -134,8 +150,29 @@ async def check_song_lyrics(song_name: str):
         "song_exists": mp3_exists,
         "lyrics_exists": lyrics_exists,
         "languages": languages,
-        "language": languages[0] if lyrics_exists else None
+        "language": languages[0] if lyrics_exists else None,
+        "lyrics_text": lrc_text
     }
+
+@app.post("/api/songs/lyrics")
+async def save_song_lyrics(request: AddLyricsRequest):
+    """
+    Salva il testo della canzone in un file con estensione .lrc
+    """
+    if not request.song_name.strip():
+        raise HTTPException(status_code=400, detail="Il nome della canzone non può essere vuoto")
+    
+    # Estraiamo solo il nome del file per sicurezza
+    song_filename = os.path.basename(request.song_name)
+    if not song_filename.lower().endswith(".mp3"):
+        song_filename += ".mp3"
+        
+    try:
+        add_lyrics_external(song_filename, request.lrc_text)
+        return {"status": "success", "message": "Lyrics salvate con successo"}
+    except Exception as e:
+        logger.error(f"Errore nel salvataggio delle lyrics: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/playlists")
 async def list_playlists():

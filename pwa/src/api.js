@@ -115,3 +115,18 @@ export const downloadCacheSong = async (url) => {
   }
   return response.json();
 };
+
+export const saveLyrics = async (songName, lrcText) => {
+  const response = await fetch(`${API_BASE_URL}/songs/lyrics`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ song_name: songName, lrc_text: lrcText }),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || 'Failed to save lyrics');
+  }
+  return response.json();
+};

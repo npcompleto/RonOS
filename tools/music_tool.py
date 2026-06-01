@@ -1,3 +1,4 @@
+from logging import info
 import yt_dlp
 import pygame
 import os
@@ -107,6 +108,21 @@ class MusicTool:
         self._playlist_thread = threading.Thread(target=self._playlist_worker, daemon=True)
         self._playlist_thread.start()
         return f"Playlist avviata ({len(self._playlist)} brani). In riproduzione: {title}"
+
+    def _clear_filename(self, title):
+        # 2. Prende il titolo originale
+        titolo_originale = title
+        
+        # 3. Rimuove parentesi tonde e quadre con tutto il loro contenuto
+        titolo_pulito = re.sub(r'\[.*?\]|\(.*?\)', '', titolo_originale)
+        
+        # 4. Rimuove caratteri speciali (tiene solo lettere, numeri, spazi, trattini e underscore)
+        titolo_pulito = re.sub(r'[^a-zA-Z0-9\s\-_]', '', titolo_pulito)
+        
+        # 5. Rimuove spazi multipli consecutivi e spazi vuoti a inizio/fine
+        titolo_pulito = re.sub(r'\s+', ' ', titolo_pulito).strip()
+        
+        return titolo_pulito.title() #Rende maiuscolo la prima lettera di ogni parola
     
     # --- LOGICA RICERCA E DOWNLOAD ---
 
@@ -128,7 +144,7 @@ class MusicTool:
             return target_file, f"In riproduzione dalla cache: {target_file}"
         return None, "Non trovato in cache."
 
-    def play_download(self, url, only_download=False):
+    def play_download(self, url, only_download=False, download_lyrics=False):
         """Scarica da un URL diretto e riproduce (interrompe playlist se attiva)."""
         logger.debug(f"Scaricamento diretto di '{url}'...")
         em = EventManager()
@@ -157,6 +173,8 @@ class MusicTool:
             caption_formats = []
             filesize = 0
             selected_format = None
+            original_title = None
+
             try:
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                     #Recuperiamo le informazione sul download
@@ -164,6 +182,7 @@ class MusicTool:
                     logger.info(info.keys())
                     filesize = info.get("filesize")
                     language = info.get("language")
+                    original_title = info.get("title")
                     captions = info.get("automatic_captions").get(language)
                     caption_formats = [c.get("ext") for c in captions]
                     logger.info(f"{language}-{filesize}-{caption_formats}")
@@ -185,39 +204,35 @@ class MusicTool:
                 )
             except Exception as e:
                 logger.error(e)
-            #Nuove options con quanto so
+
 
             ydl_opts = {
                 'format': 'bestaudio/best',
-                'outtmpl': f'{self.download_path}/%(title)s.%(ext)s',
+                'outtmpl': f'{self.download_path}/{self._clear_filename(original_title)}.%(ext)s',
                 'postprocessors': [{
                     'key': 'FFmpegExtractAudio',
                     'preferredcodec': 'mp3',
                     'preferredquality': '192',
                 }],
-                'quiet': True,
+                'quiet': False,
                 'no_overwrites': True,
                 "cookiefile": "cookies.txt"
             }
             
-            if selected_format:
+            if download_lyrics and selected_format:
                 ydl_opts['writeautomaticsub']=True
                 ydl_opts['writesubtitles']=True
                 ydl_opts['subtitleslangs']=[language]
                 ydl_opts['subtitlesformat']=selected_format
                 logger.info(f"Trovate lyrics {language} with format {selected_format}")
             else:
-                logger.warning("impossibile trovare i sottotitoli per il video scelto.")
+                logger.warning(f"Non scarico i sottotitoli: download_lyrics: {download_lyrics} - selected_format: {selected_format}")
 
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 if not only_download: em.publish("downloading", {"message": f"Sto scaricando da {url}", "started": True})
-                #Recuperiamo le informazione sul download
-                info = ydl.extract_info(url, download=False)
 
                 # Scarica direttamente
                 info = ydl.extract_info(url, download=True)
-                #logger.info(info.get("subtitles"))
-                logger.info(info.get("automatic_captions").keys())
                 
                 # Se è un singolo video, info è il dizionario del video stesso
                 video_info = info
@@ -236,11 +251,13 @@ class MusicTool:
                         logger.warning("Impossibile riprodurre la musica.")
                         return "Musica scaricata ma non posso riprodurla in questo momento."
                 else:
-                    return f"Scaricato: {video_info.get('title', 'Video')}" 
+                    logger.info(f"Scaricato: {video_info.get('title')}")
+                    return f"Scaricato: {video_info.get('title')}" 
                     
         except Exception as e:
             if not only_download: em.publish("loading", {"message": f"Errore download: {str(e)}", "started": False})
             if not only_download: self._set_currently_playing(None)
+            logger.error(e)
             return f"Errore download: {str(e)}"
 
     def _set_currently_playing(self, filename):
@@ -373,42 +390,78 @@ class MusicTool:
         
         return total, elapsed
 
+    def _parse_lrc_timestamp(self, timestamp_str):
+        """Converte un timestamp LRC [mm:ss.xx] in millisecondi."""
+        try:
+            # Formato: mm:ss.xx oppure mm:ss
+            parts = timestamp_str.split(':')
+            minutes = int(parts[0])
+            seconds_parts = parts[1].split('.')
+            seconds = int(seconds_parts[0])
+            centiseconds = int(seconds_parts[1]) if len(seconds_parts) > 1 else 0
+            # Se il valore dopo il punto ha 3 cifre è già in ms, altrimenti sono centesimi
+            if len(seconds_parts) > 1 and len(seconds_parts[1]) == 3:
+                ms = centiseconds
+            else:
+                ms = centiseconds * 10
+            return (minutes * 60 + seconds) * 1000 + ms
+        except Exception as e:
+            logger.error(f"Errore nel parsing del timestamp LRC '{timestamp_str}': {e}")
+            return 0
+
+    def _load_lrc_file(self, filepath):
+        """Carica un file .lrc e restituisce una lista di (start_ms, testo) ordinata per tempo."""
+        events = []
+        lrc_pattern = re.compile(r'\[(\d+:\d+(?:\.\d+)?)\](.*)')
+        with open(filepath, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                match = lrc_pattern.match(line)
+                if match:
+                    start_ms = self._parse_lrc_timestamp(match.group(1))
+                    text = match.group(2).strip()
+                    if text:  # Ignora righe vuote
+                        events.append({"start_ms": start_ms, "text": text})
+        events.sort(key=lambda e: e["start_ms"])
+        logger.info(f"Caricati {len(events)} eventi LRC da {filepath}")
+        return events
+
     def get_current_text(self):
         filename = None
         if not self._currently_playing:
             logger.info("Nessuna canzone in riproduzione")
             return None
-            #list files with same name but other extension
-        #logger.info(f"Canzone attuale: {self._currently_playing}")
-        for file in glob.glob(os.path.join(self.download_path, f"{self._currently_playing.replace('.mp3', '')}.*")):
-            logger.info(f"Trovato file {self._currently_playing} : {file}")
-            if os.path.exists(file) and ".mp3" not in file:
-                filename = file
-                logger.info(f"Trovato file {self._currently_playing} : {filename}")
+
+        # Cerca il file .lrc corrispondente alla canzone in riproduzione
+        if not self._lyrics_events:
+            lrc_path = os.path.join(self.download_path, f"{self._currently_playing.replace('.mp3', '')}.lrc")
+            if os.path.exists(lrc_path):
+                self._lyrics_events = self._load_lrc_file(lrc_path)
+
+        if not self._lyrics_events:
+            return None
+
+        current_ms = self.get_playback_status()[1] * 1000
+
+        # Trova la riga corrente: l'ultima riga il cui timestamp è <= current_ms
+        current_text = None
+        for i, event in enumerate(self._lyrics_events):
+            if event["start_ms"] <= current_ms:
+                current_text = event["text"]
+            else:
                 break
+
+        return current_text
+
+    def add_lyrics(self, song_filename:str, lrc_text: str):
+        lrc_filename = song_filename.replace('.mp3', '') + ".lrc"
+        #save lrc file 
+        with open(os.path.join(self.download_path, lrc_filename), "w", encoding="utf-8") as f:
+            f.write(lrc_text)
+        logger.info(f"Lyrics saved to {os.path.join(self.download_path, lrc_filename)}")
+
             
-
-        if not self._lyrics_events and filename:
-            self._currently_playing
-            with open(filename, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                logger.info(f"Lyrics data: {data}")
-                self._lyrics_events = data["events"]
-                logger.info(f"Lyrics events: {self._lyrics_events}")
-        current_ms = self.get_playback_status()[1]*1000+5000 
-        logger.info(f"Current ms: {current_ms}")
-        for event in self._lyrics_events:
-            start = event.get("tStartMs", 0)
-            duration = event.get("dDurationMs", 0)
-            end = start + duration
-            
-
-            if start <= current_ms <= end and event.get("segs"):
-                logger.info(f"Lyrics event: {event}")
-                segs = event.get("segs", [])
-                return "".join(seg.get("utf8", "") for seg in segs)
-
-        return None
+        
 
 _music_instance = MusicTool()
 @tool
@@ -502,7 +555,10 @@ def get_cache_songs():
     return _music_instance.get_cached_songs()
 def download_music_external(url):
     """Funzione esterna per scaricare musica da URL diretto senza riprodurre (es. da joystick)."""
-    return _music_instance.play_download(url, only_download=True)
+    return _music_instance.play_download(url, only_download=True, download_lyrics=False)
 
 def get_current_lyrics_text():
     return _music_instance.get_current_text()
+
+def add_lyrics_external(song_filename:str, lrc_text: str):
+    _music_instance.add_lyrics(song_filename, lrc_text)

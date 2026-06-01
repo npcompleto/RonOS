@@ -24,8 +24,6 @@ robot_face = None
 assistant = None
 tts = None
 
-lyrics_rows = []
-
 def status_monitor():
     while True:
         try:
@@ -37,24 +35,15 @@ def status_monitor():
             #Aggiorna la canzone corrente
             if utils.is_playing_music() and get_global_status().get_state() == State.DANCING:
                 current_song = get_currently_playing()
-                current_song = current_song.replace(".mp3", "").replace("_", " ").replace("(Official Video)", "").strip()
                 music_progress = get_music_progress()
                 
                 robot_face.set_progress(music_progress['elapsed_seconds'], music_progress['total_seconds'])
                 
                 music_lyrics =  get_current_lyrics_text()
-                if music_lyrics:
-                    logger.info(f"Music lyrics: {music_lyrics}")
-                    if not music_lyrics in lyrics_rows:
-                        lyrics_rows.append(music_lyrics)
-                        if len(lyrics_rows) > 3:
-                            lyrics_rows.pop(0)
-                        robot_face.set_sub_text("\n".join(lyrics_rows))
+                robot_face.set_sub_text(music_lyrics)
                 logger.debug(f"Currently playing: {current_song} [{music_progress['elapsed_seconds']:.0f}/{music_progress['total_seconds']:.0f} sec]")
                 if robot_face and current_song:
                     robot_face.set_text(current_song)
-            else:
-                lyrics_rows.clear()
                 
             
             logger.debug(f"Wi-Fi Link Quality: {utils.get_wifi_strength()}%")
@@ -67,7 +56,7 @@ def status_monitor():
 
             logger.debug(f"Current Voice Volume: {utils.get_current_voice_volume()}")
             logger.debug(f"Current Music Volume: {utils.get_current_music_volume()}")
-            time.sleep(1)
+            time.sleep(0.1)
         except Exception as e:
             logger.error(f"Errore nel monitoraggio dello stato: {e}")
             time.sleep(5)  # Attende prima di riprovare in caso di errore

@@ -56,18 +56,16 @@ class RobotFace:
             except Exception as e:
                 print(f"Errore caricamento {self.heart_path}: {e}")
 
+        # Font principale per il testo
         self._font = pygame.font.SysFont("Arial", int(self._ref * 0.045), bold=False)
-        self._sub_font = pygame.font.SysFont(
-            "Arial",
-            int(self._ref * 0.032),
-            bold=False
-        )
+        
+        # MODIFICA: Sub-font ingrandito (0.055) e impostato in Bold per risaltare maggiormente
+        self._sub_font = pygame.font.SysFont("Arial", int(self._ref * 0.055), bold=True)
+        
         self._current_text = ""
         self._wrapped_lines = [] 
         self._sub_text = ""
         self._wrapped_sub_lines = []
-
-        
 
         # Stato
         self._expression = Expression.NEUTRAL
@@ -80,7 +78,7 @@ class RobotFace:
         self._spd = 5.0
         
         self._wifi_pct = 1.0 
-        self._cpu_temp = 0.0 # Temperatura CPU
+        self._cpu_temp = 0.0 
 
         # Stato Progress Bar
         self._progress_current = 0
@@ -162,17 +160,15 @@ class RobotFace:
             self._wrapped_lines.extend(self._wrap_text(rl, max_w_px))
 
     def set_sub_text(self, text):
-        """
-        Imposta un testo secondario mostrato in un box sopra
-        la barra progresso. Max 3 righe.
-        """
+        """Imposta il testo secondario multilinea allineato al centro."""
         self._sub_text = text if text else ""
 
         if not self._sub_text:
             self._wrapped_sub_lines = []
             return
 
-        max_w_px = self.width * 0.72
+        # Margine interno del box di contenimento
+        max_w_px = self.width * 0.75
 
         raw_lines = self._sub_text.split('\n')
         wrapped = []
@@ -180,11 +176,10 @@ class RobotFace:
         for rl in raw_lines:
             wrapped.extend(self._wrap_sub_text(rl, max_w_px))
 
-        # massimo 3 righe
-        self._wrapped_sub_lines = wrapped[:3]
+        # MODIFICA: Rimosso il limite di una riga singola (wrapped[:1]) per consentire il multi-linea completo
+        self._wrapped_sub_lines = wrapped
 
     def set_wifi_level(self, percentage: float):
-        """Imposta il livello del segnale wifi (0.0 a 1.0 o 0 a 100)."""
         if percentage > 1.0:
             percentage /= 100.0
         self._wifi_pct = max(0.0, min(1.0, percentage))
@@ -207,7 +202,6 @@ class RobotFace:
         }
 
     def set_progress(self, current, total):
-        """Imposta il progresso. Se total > 0 mostra la barra, altrimenti la nasconde."""
         self._progress_current = current
         self._progress_total = total
         self._show_progress = (total > 0)
@@ -292,37 +286,29 @@ class RobotFace:
         if self._speaking: self._speak_phase += dt * 12.0
 
     def _draw_temp(self):
-            margin = int(self.width * 0.05)
-            bar_w, bar_h = max(6, int(self._ref * 0.025)), int(self._ref * 0.12)
-            x, y = margin, int(self.height * 0.03)
-            pygame.draw.rect(self.screen, (60, 60, 80), (x, y, bar_w, bar_h), 2, border_radius=5)
-            temp_pct = max(0.0, min(1.0, self._cpu_temp / 90.0))
-            fill_h = int(bar_h * temp_pct)
-            fill_color = (int(100 + 155 * temp_pct), 100, int(255 - 155 * temp_pct))
-            if fill_h > 0:
-                pygame.draw.rect(self.screen, fill_color, (x + 2, y + bar_h - fill_h - 2, bar_w - 4, fill_h - 2), border_radius=3)
+        margin = int(self.width * 0.05)
+        bar_w, bar_h = max(6, int(self._ref * 0.025)), int(self._ref * 0.12)
+        x, y = margin, int(self.height * 0.03)
+        pygame.draw.rect(self.screen, (60, 60, 80), (x, y, bar_w, bar_h), 2, border_radius=5)
+        temp_pct = max(0.0, min(1.0, self._cpu_temp / 90.0))
+        fill_h = int(bar_h * temp_pct)
+        fill_color = (int(100 + 155 * temp_pct), 100, int(255 - 155 * temp_pct))
+        if fill_h > 0:
+            pygame.draw.rect(self.screen, fill_color, (x + 2, y + bar_h - fill_h - 2, bar_w - 4, fill_h - 2), border_radius=3)
 
     def _draw_wifi(self):
-        """Disegna l'indicatore wifi a 6 barre in alto a destra."""
         num_bars = 6
-        # Parametri proporzionali allo schermo
         margin_right = int(self.width * 0.05)
         margin_top = int(self.height * 0.03)
         bar_w = max(4, int(self._ref * 0.015))
         bar_gap = max(2, int(self._ref * 0.008))
         max_bar_h = int(self._ref * 0.06)
         
-        # Punto iniziale (destra verso sinistra)
         start_x = self.width - margin_right - (num_bars * (bar_w + bar_gap))
-        
-        # Colore spento (sfondo oscurato)
         bg_bar_color = (int(self.eye_color[0]*0.15), int(self.eye_color[1]*0.15), int(self.eye_color[2]*0.15))
-
-        # Determina quante barrette accendere in base alla percentuale
         active_bars = round(self._wifi_pct * num_bars)
 
         for i in range(num_bars):
-            # Le barre crescono linearmente in altezza
             bar_h = int((i + 1) * (max_bar_h / num_bars))
             x = start_x + i * (bar_w + bar_gap)
             y = margin_top + (max_bar_h - bar_h)
@@ -333,7 +319,6 @@ class RobotFace:
     def _draw(self):
         self.screen.fill(self.bg_color)
         
-        # Indicatore Wi-Fi
         self._draw_wifi()
         self._draw_temp()
         
@@ -344,11 +329,11 @@ class RobotFace:
             self._draw_eye(cx + side * int(self._eye_spacing), cy, side)
         self._draw_mouth(int(self._mouth_y + self._eye_offset_y * 0.5))
 
-        # 2. Disegno Testo Wrappato
+        # 2. Disegno Testo Principale Wrappato (in basso)
         if self._wrapped_lines:
             line_height = self._font.get_linesize()
             total_text_h = len(self._wrapped_lines) * line_height
-            start_y = int(self.height * 0.85) - (total_text_h // 2)
+            start_y = int(self.height * 0.88) - (total_text_h // 2)
             
             for i, line in enumerate(self._wrapped_lines):
                 txt_surf = self._font.render(line, True, self.eye_color)
@@ -356,62 +341,45 @@ class RobotFace:
                 txt_rect = txt_surf.get_rect(center=(self.width // 2, y_pos))
                 self.screen.blit(txt_surf, txt_rect)
         
-        # Sub text box sopra progress bar
+        # MODIFICA: Sub text box posizionato e scalato in altezza in modo dinamico
         if self._wrapped_sub_lines:
-            box_w = int(self.width * 0.78)
-            box_h = int(self._ref * 0.18)
+            line_height = self._sub_font.get_linesize()
+            num_lines = len(self._wrapped_sub_lines)
+            
+            # Calcolo altezza dinamica del rettangolo con padding interno
+            padding_y = int(self._ref * 0.04)
+            total_text_h = num_lines * line_height
+            box_w = int(self.width * 0.84)   # Allargato il box per contenere testi grandi
+            box_h = total_text_h + (padding_y * 2)
+            
             box_x = (self.width - box_w) // 2
-            box_y = int(self.height * 0.58)
+            # Posizionato al centro-basso dello schermo, sopra la barra di progresso
+            box_y = int(self.height * 0.54) - (box_h // 2)
 
             # Sfondo semi trasparente
             box_surface = pygame.Surface((box_w, box_h), pygame.SRCALPHA)
-            pygame.draw.rect(
-                box_surface,
-                (25, 25, 40, 220),
-                (0, 0, box_w, box_h),
-                border_radius=16
-            )
+            pygame.draw.rect(box_surface, (25, 25, 40, 220), (0, 0, box_w, box_h), border_radius=18)
 
-            # Bordo
-            pygame.draw.rect(
-                box_surface,
-                (70, 70, 100, 255),
-                (0, 0, box_w, box_h),
-                width=2,
-                border_radius=16
-            )
-
+            # Bordo del box
+            pygame.draw.rect(box_surface, (70, 70, 100, 255), (0, 0, box_w, box_h), width=3, border_radius=18)
             self.screen.blit(box_surface, (box_x, box_y))
 
-            # Disegno testo centrato
-            line_height = self._sub_font.get_linesize()
-            total_h = len(self._wrapped_sub_lines) * line_height
-
-            text_y = box_y + (box_h - total_h) // 2
-
+            # Disegno del testo multilinea centrato
+            text_start_y = box_y + padding_y
             for i, line in enumerate(self._wrapped_sub_lines):
                 txt = self._sub_font.render(line, True, self.eye_color)
-
-                txt_rect = txt.get_rect(
-                    center=(
-                        self.width // 2,
-                        text_y + i * line_height
-                    )
-                )
-
+                txt_rect = txt.get_rect(center=(self.width // 2, text_start_y + (i * line_height) + (line_height // 2)))
                 self.screen.blit(txt, txt_rect)
 
-
+        # Barra di avanzamento progressi
         if self._show_progress and self._progress_total > 0:
             pct = min(1.0, self._progress_current / self._progress_total)
             bar_w = int(self.width * 0.6)
             bar_h = int(self._ref * 0.02)
             bar_x = (self.width - bar_w) // 2
-            bar_y = int(self.height * 0.75)
+            bar_y = int(self.height * 0.76)
             
-            # Sfondo barra
             pygame.draw.rect(self.screen, (50, 50, 70), (bar_x, bar_y, bar_w, bar_h), border_radius=5)
-            # Riempimento
             pygame.draw.rect(self.screen, self.eye_color, (bar_x, bar_y, int(bar_w * pct), bar_h), border_radius=5)
 
     def _draw_eye(self, cx, cy, side):
@@ -439,21 +407,17 @@ class RobotFace:
             surf.blit(arc_surf, (0, 0))
         elif self._expression == Expression.IN_LOVE:
             self._draw_heart(surf, color, rect)
-            
         elif self._expression == Expression.DOWNLOADING: 
             bg_eye_color = (int(color[0]*0.2), int(color[1]*0.2), int(color[2]*0.2))
             fill_color = (min(255, int(color[0] * 1.3 + 50)), min(255, int(color[1] * 1.3 + 50)), min(255, int(color[2] * 1.3 + 50)))
             
             pygame.draw.rect(surf, bg_eye_color, rect, border_radius=int(self._eye_radius))
-            
             progress_surf = pygame.Surface((w * 2, h * 2), pygame.SRCALPHA)
             pygame.draw.rect(progress_surf, fill_color, rect, border_radius=int(self._eye_radius))
             
             fill_h = int(h * self._download_progress)
             clip_rect = pygame.Rect(w // 2, (h // 2) + h - fill_h, w, fill_h)
-            
             surf.blit(progress_surf, clip_rect, clip_rect)
-            
         else:
             pygame.draw.rect(surf, color, rect, border_radius=int(self._eye_radius))
             rot = self._eye_rot_l if side < 0 else self._eye_rot_r
@@ -530,11 +494,8 @@ class RobotFaceManager:
                 if ev.type == pygame.KEYDOWN and ev.key == pygame.K_ESCAPE: running = False
                 if ev.type == pygame.MOUSEBUTTONDOWN or ev.type == pygame.FINGERDOWN:
                     conn.send(("CLICK", None))
-                # --- INTERCETTAZIONE MOVIMENTO MOUSE ---
                 if ev.type == pygame.MOUSEMOTION:
-                    # rel contiene lo spostamento (delta_x, delta_y) dall'ultimo frame
                     rel_x, rel_y = ev.rel
-                    
                     if rel_y < 0:
                         conn.send(("MOUSE_MOVE", "up"))
                     elif rel_y > 0:
@@ -583,23 +544,17 @@ if __name__ == "__main__":
     manager = RobotFaceManager(fullscreen=False)
     manager.start()
     try:
-        manager.set_expression(Expression.HAPPY)
-        manager.set_text("Segnale Ottimo!")
-        manager.set_wifi_level(1.0)
-        time.sleep(3)
+        manager.set_expression(Expression.DOWNLOADING)
+        manager.set_wifi_level(0.85)
+        manager.set_cpu_temp(45.0)
+        manager.set_progress(35, 100)
         
-        manager.set_expression(Expression.THOUGHTFUL)
-        manager.set_text("Segnale scarso...")
-        manager.set_wifi_level(0.30)
-        time.sleep(3)
-        
-        manager.set_text("Nessun Segnale")
-        manager.set_wifi_level(0.0)
-
+        # Test con stringa lunga e andate a capo esplicite
         manager.set_sub_text(
-            "Scaricamento modello AI in corso.\n"
-            "Attendere qualche secondo."
+            "Scaricamento del modello di IA localizzato...\n"
+            "Ottimizzazione pacchetti e calibrazione dei pesi.\n"
+            "Attendere il completamento."
         )
-        time.sleep(2)
+        time.sleep(6)
     except KeyboardInterrupt: pass
     finally: manager.stop()
