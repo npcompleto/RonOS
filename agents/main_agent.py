@@ -75,8 +75,6 @@ class MainAgent(BaseAgent):
                 "Non utilizzare MAI emoji (es. NO a 🇯🇵, 😊, 🚀, ecc.).",
                 "Non utilizzare caratteri speciali di formattazione come asterischi per il grassetto (es. NO a **Giappone**), trattini o elenchi puntati grafici, a meno che non sia strettamente indispensabile per la chiarezza del testo.",
                 "Gli unici caratteri racchiusi tra parentesi quadre ammessi sono esclusivamente i tag delle espressioni autorizzati (es. [[HAPPY]], [[THOUGHTFUL]], [[NEUTRAL]], [[DANCING]], [[SLEEPING]]). Il resto del testo deve essere puro testo lineare, pulito e facile da leggere o pronunciare."
-            ]
-
             ],
             tools=[call_interpreter_agent, call_school_agent, call_music_agent, call_teacher_agent, get_meteo],
             enable_memory=True
