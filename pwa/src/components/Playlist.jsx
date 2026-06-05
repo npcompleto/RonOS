@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { fetchPlaylists, createPlaylist, deletePlaylist, fetchCacheSongs, removeSongFromPlaylist, addSongToPlaylist, deleteCacheSong, downloadCacheSong, fetchLyricsStatus, saveLyrics } from '../api';
+import { fetchPlaylists, createPlaylist, deletePlaylist, fetchCacheSongs, removeSongFromPlaylist, addSongToPlaylist, deleteCacheSong, downloadCacheSong, fetchLyricsStatus, saveLyrics, playCacheSong } from '../api';
 import { logger } from '../logger';
 
 export default function Playlist({ onBack }) {
@@ -22,6 +22,8 @@ export default function Playlist({ onBack }) {
   const [selectedPlaylistForSong, setSelectedPlaylistForSong] = useState('');
   const [downloadUrl, setDownloadUrl] = useState('');
   const [isDownloading, setIsDownloading] = useState(false);
+  const [playingsong, setPlayingsong] = useState(null);
+  const [isPlayingLoading, setIsPlayingLoading] = useState(false);
 
   useEffect(() => {
     logger.info('Playlist component mounted, loading playlists and cache songs');
@@ -202,6 +204,22 @@ export default function Playlist({ onBack }) {
       setError(err.message);
     } finally {
       setIsSavingLyrics(false);
+    }
+  };
+
+  const handlePlayCacheSong = async (songName) => {
+    try {
+      setPlayingsong(songName);
+      setIsPlayingLoading(true);
+      logger.info(`Playing song: ${songName}`);
+      await playCacheSong(songName);
+      logger.info(`Song is now playing: ${songName}`);
+    } catch (err) {
+      logger.error(`Failed to play song: ${err.message}`);
+      setError(err.message);
+    } finally {
+      setIsPlayingLoading(false);
+      setPlayingsong(null);
     }
   };
 
@@ -386,6 +404,14 @@ export default function Playlist({ onBack }) {
                     </span>
                   </div>
                   <div className="song-actions">
+                    <button
+                      className="icon-btn play"
+                      title="Play"
+                      onClick={() => handlePlayCacheSong(song)}
+                      disabled={isPlayingLoading}
+                    >
+                      ▶️
+                    </button>
                     <button
                       className="icon-btn edit-lyrics"
                       title="Edit lyrics"

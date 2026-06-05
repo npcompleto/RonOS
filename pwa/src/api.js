@@ -130,3 +130,18 @@ export const saveLyrics = async (songName, lrcText) => {
   }
   return response.json();
 };
+
+export const playCacheSong = async (songName) => {
+  const response = await fetch(`${API_BASE_URL}/cache_songs/play`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ song_name: songName }),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || 'Failed to play song');
+  }
+  return response.json();
+};

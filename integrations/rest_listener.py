@@ -4,7 +4,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from event_manager import EventManager
 from config import logger, MUSIC_CACHE_DIR
-from tools.music_tool import get_playlists_external, get_cache_songs, download_music_external, add_lyrics_external
+from tools.music_tool import get_playlists_external, get_cache_songs, download_music_external, add_lyrics_external, play_song_from_cache_external
 
 from fastapi.middleware.cors import CORSMiddleware
 import os
@@ -335,6 +335,9 @@ async def delete_cache_song(song_name: str):
 class DownloadCacheSongRequest(BaseModel):
     url: str
 
+class PlayCacheSongRequest(BaseModel):
+    song_name: str
+
 @app.post("/api/cache_songs/download")
 async def download_cache_song(request: DownloadCacheSongRequest):
     """Scarica un URL nella cache locale usando download_music_external."""
@@ -349,6 +352,24 @@ async def download_cache_song(request: DownloadCacheSongRequest):
     except HTTPException:
         raise
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/cache_songs/play")
+async def play_cache_song(request: PlayCacheSongRequest):
+    """Avvia la riproduzione di una canzone dalla cache."""
+    if not request.song_name.strip():
+        raise HTTPException(status_code=400, detail="Song name cannot be empty")
+
+    try:
+        success, message = play_song_from_cache_external(request.song_name)
+        if success:
+            return {"status": "success", "message": message}
+        else:
+            raise HTTPException(status_code=404, detail=message)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Errore nella riproduzione: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/logs")
