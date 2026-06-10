@@ -266,7 +266,7 @@ if __name__ == "__main__":
         scheduler.add_job("axios_sync", axios_sync, interval="4h", run_immediately=True)
         scheduler.add_job("axios_rank_sync", axios_rank_sync, interval="1h", run_immediately=True)
         scheduler.add_job("sync_weekly_meteo", run_sync_weekly_meteo, interval="1d", run_immediately=True)
-        scheduler.add_job("dreaming", dreaming_job, interval="2h", run_immediately=True)
+        #scheduler.add_job("dreaming", dreaming_job, interval="2h", run_immediately=True)
         scheduler.start()
 
         if telegram_bot:
