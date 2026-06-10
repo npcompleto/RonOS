@@ -15,7 +15,7 @@ class State(Enum):
 
 
 _VALID_TRANSITIONS = {
-    State.IDLE: {State.LISTENING, State.SPEAKING}, #Thinking e Dancing sono necessari per telegram
+    State.IDLE: {State.LISTENING, State.SPEAKING, State.THINKING, State.DANCING}, #Thinking e Dancing sono necessari per telegram
     State.LISTENING: {State.TRANSCRIBING, State.IDLE},
     State.TRANSCRIBING: {State.THINKING, State.IDLE},
     State.THINKING: {State.SPEAKING, State.DANCING, State.IDLE},

@@ -128,6 +128,42 @@ class MusicTool:
     
     # --- LOGICA RICERCA E DOWNLOAD ---
 
+    def play_song_by_name(self, song_name: str):
+        """Riproduce un brano dalla cache dato il suo nome."""
+        self.stop()  # Ferma la riproduzione precedente
+        self._lyrics_events = None  # Reset lyrics
+        
+        logger.debug(f"Ricerca canzone '{song_name}' in cache...")
+        
+        # Se il nome contiene .mp3, usalo direttamente
+        if song_name.lower().endswith('.mp3'):
+            target_file = song_name
+        else:
+            # Aggiungi .mp3 se non presente
+            target_file = song_name if song_name.lower().endswith('.mp3') else f"{song_name}.mp3"
+        
+        filepath = os.path.join(self.download_path, target_file)
+        
+        if not os.path.exists(filepath):
+            logger.error(f"File non trovato: {filepath}")
+            return False, f"Canzone '{song_name}' non trovata nella cache"
+        
+        try:
+            pygame.mixer.music.load(filepath)
+            em = EventManager()
+            if get_global_status().set_state(State.DANCING, reason="Riproduzione musicale (play_song_by_name)"):
+                em.publish("music", {"message": target_file, "started": True})
+                self._currently_playing = target_file
+                pygame.mixer.music.play()
+                logger.info(f"In riproduzione: {target_file}")
+                return True, f"In riproduzione: {target_file}"
+            else:
+                logger.warning("Impossibile riprodurre la musica, stato attuale non permette la transizione a DANCING.")
+                return False, "Impossibile riprodurre la musica in questo momento"
+        except Exception as e:
+            logger.error(f"Errore nella riproduzione: {e}")
+            return False, f"Errore: {str(e)}"
+
     def play_from_cache(self, url):
         """Cerca e riproduce un singolo brano dalla cache."""
         if not url.startswith(self.download_path):
@@ -565,3 +601,7 @@ def get_current_lyrics_text():
 
 def add_lyrics_external(song_filename:str, lrc_text: str):
     _music_instance.add_lyrics(song_filename, lrc_text)
+
+def play_song_from_cache_external(song_name: str):
+    """Funzione esterna per avviare la riproduzione di una canzone dalla cache."""
+    return _music_instance.play_song_by_name(song_name)
